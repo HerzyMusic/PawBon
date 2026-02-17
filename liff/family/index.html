@@ -111,7 +111,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.2 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.3.3 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -268,8 +268,9 @@ function renderMemberView() {
 function copyCode() {
   var code = familyData.familyCode;
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(code);
-    alert('📋 コピーしました: ' + code);
+    navigator.clipboard.writeText(code).then(function() {
+      alert('✅ コピーしました！\n\n家族コード: ' + code + '\n\nLINEの友だちに貼り付けてシェアしてください 🐾');
+    });
   } else {
     var input = document.createElement('input');
     input.value = code;
@@ -277,19 +278,49 @@ function copyCode() {
     input.select();
     document.execCommand('copy');
     document.body.removeChild(input);
-    alert('📋 コピーしました: ' + code);
+    alert('✅ コピーしました！\n\n家族コード: ' + code + '\n\nLINEの友だちに貼り付けてシェアしてください 🐾');
   }
 }
 
 function shareLine() {
   if (typeof liff !== 'undefined' && liff.isApiAvailable('shareTargetPicker')) {
-    liff.shareTargetPicker([{
-      type: 'text',
-      text: '🐾 PawBon 元気チェック\n\n' +
-            familyData.petNames + 'の家族になりませんか？\n\n' +
-            '家族コード: ' + familyData.familyCode + '\n\n' +
-            'PawBonを友だち追加して\nこのコードを送信してください！'
-    }]);
+    liff.shareTargetPicker([
+      {
+        type: 'flex',
+        altText: '🐾 PawBon 家族コード: ' + familyData.familyCode,
+        contents: {
+          type: 'bubble',
+          size: 'kilo',
+          header: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: '🐾 PawBon 元気チェック', size: 'sm', weight: 'bold', color: '#E8475F' }
+            ],
+            paddingBottom: '0px'
+          },
+          body: {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              { type: 'text', text: familyData.petNames + 'の家族になりませんか？', size: 'md', weight: 'bold', wrap: true },
+              { type: 'separator', margin: 'lg' },
+              { type: 'box', layout: 'vertical', margin: 'lg', contents: [
+                { type: 'text', text: '家族コード', size: 'xs', color: '#999999' },
+                { type: 'text', text: familyData.familyCode, size: 'xxl', weight: 'bold', color: '#E8475F', align: 'center', margin: 'sm' }
+              ]},
+              { type: 'text', text: 'PawBonを友だち追加して、メニューの「家族参加」からこのコードを入力してください', size: 'xs', color: '#999999', wrap: true, margin: 'lg' }
+            ]
+          }
+        }
+      }
+    ]).then(function(res) {
+      if (res) {
+        alert('✅ シェアしました！');
+      }
+    }).catch(function(err) {
+      copyCode();
+    });
   } else {
     copyCode();
   }
