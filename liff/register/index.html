@@ -256,27 +256,34 @@ async function submitRegister() {
   };
   
   try {
-    // 1. 登録リクエスト送信（レスポンスは読めない場合がある）
+    // 1. GAS に登録リクエスト送信（CORS回避: no-cors）
     await fetch(GAS_URL, {
       method: 'POST',
+      mode: 'no-cors',
       body: JSON.stringify(payload)
     }).catch(function(){});
     
-    // 2. 少し待ってから GET で登録確認
-    await new Promise(function(r){ setTimeout(r, 2000); });
+    // 2. GAS処理を待つ
+    await new Promise(function(r){ setTimeout(r, 3000); });
     
-    var checkUrl = GAS_URL + '?action=getUserData&lineId=' + encodeURIComponent(state.lineId);
-    var checkRes = await fetch(checkUrl);
-    var checkData = await checkRes.json();
+    // 3. Supabase から直接確認（CORS問題なし）
+    var supaUrl = PAWBON_CONFIG.SUPABASE_URL + '/rest/v1/pet_families?owner_line_id=eq.' + encodeURIComponent(state.lineId) + '&limit=1';
+    var supaRes = await fetch(supaUrl, {
+      headers: {
+        'apikey': PAWBON_CONFIG.SUPABASE_KEY,
+        'Authorization': 'Bearer ' + PAWBON_CONFIG.SUPABASE_KEY
+      }
+    });
+    var families = await supaRes.json();
     
     document.getElementById('loading').classList.remove('show');
     
-    if (checkData && checkData.registered && checkData.familyCode) {
-      document.getElementById('familyCodeDisplay').textContent = checkData.familyCode;
+    if (families && families.length > 0) {
+      document.getElementById('familyCodeDisplay').textContent = families[0].family_code;
       document.getElementById('doneMsg').textContent = payload.petNames + 'の情報を保存しました';
       show('step4');
     } else {
-      alert('登録確認中にエラーが発生しました。もう一度お試しください。');
+      alert('登録処理に時間がかかっています。少し待ってからもう一度お試しください。');
       show('step3');
     }
   } catch (e) {
