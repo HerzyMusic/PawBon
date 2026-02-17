@@ -54,6 +54,10 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
   <div class="progress"><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
   <div class="section">
+    <label class="form-label">👤 あなたのお名前</label>
+    <input class="form-input" id="ownerName" placeholder="例：田中太郎">
+    <div class="hint-text">💡 家族に表示される名前です</div>
+
     <label class="form-label">🐾 ペットのお名前</label>
     <input class="form-input" id="petNames" placeholder="例：チョコ（複数はカンマ区切り）">
     <div class="hint-text">💡 複数の場合：チョコ, モカ, ラテ</div>
@@ -215,6 +219,8 @@ function onAreaChange() {
 
 // ===== ステップ遷移 =====
 function goStep2() {
+  const ownerName = document.getElementById('ownerName').value.trim();
+  if (!ownerName) { alert('お名前を入力してください'); return; }
   const names = document.getElementById('petNames').value.trim();
   if (!names) { alert('ペットの名前を入力してください'); return; }
   hide('step1'); show('step2');
@@ -226,10 +232,12 @@ function goStep3() {
   
   // 確認画面生成
   const names = document.getElementById('petNames').value.trim();
+  const ownerName = document.getElementById('ownerName').value.trim();
   const breed = document.getElementById('breeds').value || '未選択';
   const detail = document.getElementById('areaDetail').value || '';
   
   document.getElementById('confirmCard').innerHTML = `
+    <div class="data-row"><span class="label">👤 お名前</span><span class="value">${ownerName}</span></div>
     <div class="data-row"><span class="label">🐾 ペット</span><span class="value">${names}</span></div>
     <div class="data-row"><span class="label">📋 品種</span><span class="value">${breed}</span></div>
     <div class="data-row"><span class="label">🔢 頭数</span><span class="value">${state.petCount}匹</span></div>
@@ -248,6 +256,7 @@ async function submitRegister() {
   const payload = {
     action: 'register',
     lineId: state.lineId,
+    ownerName: document.getElementById('ownerName').value.trim(),
     petNames: document.getElementById('petNames').value.trim(),
     breeds: state.breeds,
     petCount: state.petCount,
