@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — 家族管理</title>
+<style>
+:root{--rose:#E8475F;--rose-l:#FFF0F2;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--orange-l:#FFF4F0;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:20px;}
+.header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
+.section{padding:16px;}
+.section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
+.code-box{background:linear-gradient(135deg,var(--rose-l),var(--orange-l));border:1.5px dashed var(--rose);border-radius:16px;padding:20px;text-align:center;margin-bottom:16px;}
+.code-box .label{font-size:11px;color:var(--rose);font-weight:700;}
+.code-box .code{font-family:monospace;font-size:28px;font-weight:700;color:var(--rose);letter-spacing:6px;margin:8px 0;}
+.code-box .hint{font-size:11px;color:var(--s400);}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn{display:block;width:100%;padding:12px;border-radius:14px;font-size:14px;font-weight:800;text-align:center;cursor:pointer;border:none;font-family:inherit;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--rose),var(--orange));color:#fff;}
+.btn-outline{background:var(--card);color:var(--s500);border:1.5px solid var(--s200);}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;}
+.btn-ghost{background:transparent;color:var(--s500);font-size:13px;margin-top:8px;width:auto;display:inline-block;}
+.member-card{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:14px;border:1px solid var(--s200);margin-bottom:8px;}
+.member-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--rose-l);}
+.member-info{flex:1;}
+.member-info .name{font-size:14px;font-weight:700;}
+.member-info .detail{font-size:10px;color:var(--s400);}
+.member-status{font-size:10px;padding:4px 8px;border-radius:20px;font-weight:700;background:var(--teal-l);color:var(--teal-d);}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.info{padding:12px;border-radius:12px;font-size:12px;text-align:center;margin-bottom:12px;}
+.info.amber{background:var(--amber-l);color:var(--orange);border:1px solid var(--amber);}
+.info.teal{background:var(--teal-l);color:var(--teal-d);border:1px solid var(--teal);}
+.record-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--s100);font-size:12px;}
+.record-row:last-child{border:none;}
+.record-row .g{color:var(--teal-d);font-weight:700;}
+.record-row .w{color:#92400E;font-weight:700;}
+.loading{text-align:center;padding:60px 20px;color:var(--s400);}
+.empty{text-align:center;padding:40px 20px;color:var(--s400);}
+.empty .icon{font-size:48px;margin-bottom:12px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>👨‍👩‍👦 家族</h1>
+  <p id="headerSub">読み込み中...</p>
+</div>
+
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">👨‍👩‍👦</div>
+  <div>読み込み中...</div>
+</div>
+
+<!-- ===== オーナービュー ===== -->
+<div id="ownerView" style="display:none;">
+  <div class="section">
+    <div class="code-box">
+      <div class="label">あなたの家族コード</div>
+      <div class="code" id="ownerCode">-</div>
+      <div class="hint">このコードを家族にシェアしてください</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="shareLine()">📤 LINEでシェア</button>
+      <button class="btn btn-outline" onclick="copyCode()">📋 コピー</button>
+    </div>
+  </div>
+  
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">👨‍👩‍👦 登録済み家族</div>
+    <div id="memberList">
+      <div class="empty"><div class="icon">👋</div>まだ家族が登録されていません<br><br>家族コードを共有して<br>招待しましょう！</div>
+    </div>
+  </div>
+
+  <div class="section" style="padding-top:0;">
+    <div class="info amber">
+      💡 家族がコードを入力すると<br>毎日の元気通知が届きます！
+    </div>
+  </div>
+</div>
+
+<!-- ===== メンバービュー ===== -->
+<div id="memberView" style="display:none;">
+  <div class="section">
+    <div class="card" style="text-align:center;background:var(--teal-l);border:1.5px solid var(--teal);">
+      <div style="font-size:28px;">🐕</div>
+      <div style="font-size:16px;font-weight:800;margin-top:6px;" id="memberPets">-</div>
+      <div style="font-size:11px;color:var(--s400);margin-top:2px;" id="memberArea">-</div>
+    </div>
+    
+    <div class="info teal">
+      💌 あなたは家族メンバーとして登録されています
+    </div>
+  </div>
+  
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">📋 最近の元気チェック</div>
+    <div class="card" id="memberHistory" style="padding:0 16px;">
+      <!-- JS生成 -->
+    </div>
+  </div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../config.js"></script>
+<script>
+const GAS_URL = PAWBON_CONFIG.GAS_URL;
+let lineId = '';
+let familyData = null;
+
+async function initLiff() {
+  try {
+    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.family });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    const profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) { lineId = 'debug_user'; }
+  loadFamily();
+}
+initLiff();
+
+async function loadFamily() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getFamilyInfo&lineId=' + lineId);
+    familyData = await res.json();
+    
+    if (familyData.error) {
+      document.getElementById('loading').innerHTML = '<div class="empty"><div class="icon">📝</div>まだ登録されていません</div>';
+      return;
+    }
+    
+    document.getElementById('loading').style.display = 'none';
+    
+    if (familyData.role === 'owner') {
+      renderOwnerView();
+    } else {
+      renderMemberView();
+    }
+  } catch (e) {
+    // デバッグ用
+    familyData = {
+      role:'owner', familyCode:'P-8472', petNames:'チョコ, モカ, ラテ', area:'東京都 世田谷区',
+      members:[
+        {display_name:'おばあちゃん',relation:'祖父母',registered_at:'2026-02-15'},
+        {display_name:'パパ',relation:'親',registered_at:'2026-02-16'}
+      ],
+      recentCheckins:[
+        {date:'2026-02-17',status:'genki'},{date:'2026-02-16',status:'genki'},
+        {date:'2026-02-15',status:'worry',worried_pets:'モカ',symptoms:'食欲なし'}
+      ]
+    };
+    document.getElementById('loading').style.display = 'none';
+    renderOwnerView();
+  }
+}
+
+function renderOwnerView() {
+  document.getElementById('ownerView').style.display = 'block';
+  document.getElementById('headerSub').textContent = familyData.petNames + ' · オーナー';
+  document.getElementById('ownerCode').textContent = familyData.familyCode;
+  
+  if (familyData.members && familyData.members.length > 0) {
+    const icons = { '祖父母':'👵', '親':'👨', '兄弟姉妹':'👦', '友人':'👫' };
+    document.getElementById('memberList').innerHTML = familyData.members.map(m =>
+      `<div class="member-card">
+        <div class="member-av">${icons[m.relation] || '👤'}</div>
+        <div class="member-info">
+          <div class="name">${m.display_name}</div>
+          <div class="detail">${m.relation} · ${m.registered_at} 登録</div>
+        </div>
+        <div class="member-status">通知ON</div>
+      </div>`
+    ).join('');
+  }
+}
+
+function renderMemberView() {
+  document.getElementById('memberView').style.display = 'block';
+  document.getElementById('headerSub').textContent = '家族メンバー';
+  document.getElementById('memberPets').textContent = '🐾 ' + familyData.petNames;
+  document.getElementById('memberArea').textContent = '📍 ' + familyData.area;
+  
+  if (familyData.recentCheckins && familyData.recentCheckins.length > 0) {
+    const weekdays = ['日','月','火','水','木','金','土'];
+    document.getElementById('memberHistory').innerHTML = familyData.recentCheckins.map(r => {
+      const d = new Date(r.date);
+      const label = `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
+      if (r.status === 'genki') {
+        return `<div class="record-row"><span>${label}</span><span class="g">✅ 全員元気</span></div>`;
+      } else {
+        return `<div class="record-row"><span>${label}</span><span class="w">⚠️ ${r.worried_pets||'心配'}</span></div>`;
+      }
+    }).join('');
+  }
+}
+
+function copyCode() {
+  const code = familyData.familyCode;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code);
+    alert('📋 コピーしました: ' + code);
+  } else {
+    const input = document.createElement('input');
+    input.value = code;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+    alert('📋 コピーしました: ' + code);
+  }
+}
+
+function shareLine() {
+  if (typeof liff !== 'undefined' && liff.isApiAvailable('shareTargetPicker')) {
+    liff.shareTargetPicker([{
+      type: 'text',
+      text: '🐾 PawBon 元気チェック\n\n' +
+            familyData.petNames + 'の家族になりませんか？\n\n' +
+            '家族コード: ' + familyData.familyCode + '\n\n' +
+            'PawBonを友だち追加して\nこのコードを送信してください！\n\n' +
+            '→ https://lin.ee/xxxxx'
+    }]);
+  } else {
+    copyCode();
+  }
+}
+</script>
+</body>
+</html>
