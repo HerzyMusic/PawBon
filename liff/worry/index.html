@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — 心配な子がいる</title>
+<style>
+:root{--rose:#E8475F;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+.header{background:var(--card);padding:16px;border-bottom:2px solid var(--amber);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
+.section{padding:16px;}
+.pet-row{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1.5px solid var(--s200);cursor:pointer;transition:all .15s;margin-bottom:8px;background:var(--card);}
+.pet-row .icon{font-size:24px;}
+.pet-row .name{flex:1;font-size:14px;font-weight:700;}
+.pet-row .status{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;}
+.pet-row.ok{border-color:var(--teal);background:var(--teal-l);}
+.pet-row.ok .status{background:var(--teal);color:#fff;}
+.pet-row.worried{border-color:var(--amber);background:var(--amber-l);}
+.pet-row.worried .status{background:var(--amber);color:#fff;}
+.symptom-area{display:none;margin-top:16px;}
+.symptom-area.show{display:block;}
+.form-label{font-size:12px;font-weight:700;color:var(--s500);margin-bottom:8px;display:block;}
+.symptom-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.symptom-btn{padding:8px 14px;border-radius:10px;border:1.5px solid var(--s200);background:var(--card);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.symptom-btn.selected{border-color:var(--amber);background:var(--amber-l);color:#92400E;}
+.form-input{width:100%;padding:12px 14px;border:1.5px solid var(--s200);border-radius:12px;font-size:14px;background:var(--card);font-family:inherit;margin-bottom:16px;}
+.form-input:focus{outline:none;border-color:var(--amber);}
+.btn{display:block;width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:800;text-align:center;cursor:pointer;border:none;font-family:inherit;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn-warn{background:linear-gradient(135deg,var(--amber),var(--orange));color:#fff;box-shadow:0 4px 16px rgba(255,179,71,.3);}
+.btn-ghost{background:transparent;color:var(--s500);font-size:13px;margin-top:8px;}
+.btn:disabled{opacity:.5;}
+.done{text-align:center;padding:40px 16px;display:none;}
+.done .icon{font-size:64px;}
+.done h2{font-size:20px;font-weight:900;color:#92400E;margin-top:12px;}
+.done p{font-size:13px;color:var(--s500);margin-top:6px;line-height:1.6;}
+.info{padding:12px;border-radius:12px;font-size:12px;text-align:center;margin-top:12px;}
+.info.amber{background:var(--amber-l);color:#92400E;border:1px solid var(--amber);}
+.loading{display:none;text-align:center;padding:40px;}
+.loading.show{display:block;}
+</style>
+</head>
+<body>
+
+<!-- ===== メイン画面 ===== -->
+<div id="main">
+  <div class="header">
+    <h1>⚠️ 心配な子を選んでください</h1>
+    <p>該当する子をタップして「心配⚠️」に切り替え</p>
+  </div>
+  <div class="section">
+    <div id="petList">
+      <!-- ペットリストはJSで動的生成 -->
+      <div style="text-align:center;padding:20px;color:var(--s400);">読み込み中...</div>
+    </div>
+    
+    <div id="symptomArea" class="symptom-area">
+      <label class="form-label">心配な症状（任意）</label>
+      <div class="symptom-grid" id="symptomGrid">
+        <div class="symptom-btn" onclick="toggleSymptom(this)">食欲なし</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">元気なし</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">下痢</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">嘔吐</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">咳</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">くしゃみ</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">足を引きずる</div>
+        <div class="symptom-btn" onclick="toggleSymptom(this)">その他</div>
+      </div>
+      
+      <label class="form-label">メモ（任意）</label>
+      <input class="form-input" id="memo" placeholder="例：朝からご飯を食べない">
+    </div>
+  </div>
+  <div class="section" style="padding-top:0;">
+    <button class="btn btn-warn" id="submitBtn" onclick="submitWorry()" disabled>⚠️ チェック完了</button>
+    <button class="btn btn-ghost" onclick="closeLiff()">← キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== Loading ===== -->
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">⏳</div>
+  <div>記録中...</div>
+</div>
+
+<!-- ===== 完了画面 ===== -->
+<div id="done" class="done">
+  <div class="icon">⚠️</div>
+  <h2>チェック完了</h2>
+  <p id="doneMsg"></p>
+  <div class="info amber">お大事にしてください 💛<br><span style="font-size:11px;">症状が続く場合は獣医さんへご相談を</span></div>
+  <button class="btn btn-ghost" style="margin-top:16px;" onclick="closeLiff()">閉じる</button>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const GAS_URL = 'https://aaa.gashi.workers.dev/';
+let lineId = '';
+let petNames = [];
+const worriedPets = new Set();
+
+// ===== LIFF初期化 =====
+async function initLiff() {
+  try {
+    await liff.init({ liffId: '2009150735-o8ZaIkmY' });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    const profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) {
+    lineId = 'debug_user';
+  }
+  loadUserData();
+}
+initLiff();
+
+// ===== ユーザーデータ読込 =====
+async function loadUserData() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getUserData&lineId=' + lineId);
+    const data = await res.json();
+    
+    if (!data.registered) {
+      document.getElementById('petList').innerHTML = '<div style="text-align:center;padding:20px;">未登録です。先にペット登録をしてください。</div>';
+      return;
+    }
+    
+    if (data.checkedInToday) {
+      document.getElementById('petList').innerHTML = '<div style="text-align:center;padding:20px;">✅ 今日はもうチェック済みです！</div>';
+      document.getElementById('submitBtn').style.display = 'none';
+      return;
+    }
+    
+    // ペットリスト生成
+    petNames = data.petNames.split(',').map(n => n.trim());
+    const icons = ['🐕','🐈','🐩','🐾'];
+    
+    document.getElementById('petList').innerHTML = petNames.map((name, i) =>
+      `<div class="pet-row ok" onclick="togglePet(this,'${name}')" data-name="${name}">
+        <div class="icon">${icons[i % icons.length]}</div>
+        <div class="name">${name}</div>
+        <div class="status">元気 ✅</div>
+      </div>`
+    ).join('');
+    
+  } catch (e) {
+    console.error('Load error:', e);
+    // デバッグ用フォールバック
+    petNames = ['チョコ','モカ','ラテ'];
+    document.getElementById('petList').innerHTML = petNames.map((name, i) =>
+      `<div class="pet-row ok" onclick="togglePet(this,'${name}')" data-name="${name}">
+        <div class="icon">${['🐕','🐕','🐩'][i]}</div>
+        <div class="name">${name}</div>
+        <div class="status">元気 ✅</div>
+      </div>`
+    ).join('');
+  }
+}
+
+// ===== ペット切替 =====
+function togglePet(el, name) {
+  if (el.classList.contains('ok')) {
+    el.classList.remove('ok');
+    el.classList.add('worried');
+    el.querySelector('.status').textContent = '心配 ⚠️';
+    worriedPets.add(name);
+  } else {
+    el.classList.remove('worried');
+    el.classList.add('ok');
+    el.querySelector('.status').textContent = '元気 ✅';
+    worriedPets.delete(name);
+  }
+  
+  const area = document.getElementById('symptomArea');
+  area.classList.toggle('show', worriedPets.size > 0);
+  document.getElementById('submitBtn').disabled = worriedPets.size === 0;
+}
+
+function toggleSymptom(el) {
+  el.classList.toggle('selected');
+}
+
+// ===== 送信 =====
+async function submitWorry() {
+  if (worriedPets.size === 0) return;
+  
+  document.getElementById('main').style.display = 'none';
+  document.getElementById('loading').classList.add('show');
+  
+  const symptoms = Array.from(document.querySelectorAll('.symptom-btn.selected'))
+    .map(el => el.textContent).join(', ');
+  const memo = document.getElementById('memo').value.trim();
+  
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'checkinWorry',
+        lineId: lineId,
+        worriedPets: Array.from(worriedPets).join(', '),
+        symptoms: symptoms,
+        memo: memo
+      })
+    });
+    const data = await res.json();
+    
+    document.getElementById('loading').classList.remove('show');
+    
+    const wNames = Array.from(worriedPets).join('・');
+    document.getElementById('doneMsg').textContent = 
+      '⚠️ ' + wNames + 'の心配を記録しました。\n家族にも状況を伝えました。';
+    document.getElementById('done').style.display = 'block';
+    
+  } catch (e) {
+    document.getElementById('loading').classList.remove('show');
+    alert('通信エラーが発生しました');
+    document.getElementById('main').style.display = 'block';
+  }
+}
+
+function closeLiff() {
+  if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); }
+  else { window.close(); }
+}
+</script>
+</body>
+</html>

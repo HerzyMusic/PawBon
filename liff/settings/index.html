@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — 設定</title>
+<style>
+:root{--rose:#E8475F;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:20px;}
+.header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.section{padding:16px;}
+.section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
+.card{background:var(--card);border-radius:16px;padding:0 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.list-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--s100);cursor:pointer;}
+.list-item:last-child{border:none;}
+.list-ico{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.list-body{flex:1;}
+.list-body .lt{font-size:14px;font-weight:700;}
+.list-body .lb{font-size:11px;color:var(--s400);margin-top:1px;}
+.list-arr{color:var(--s400);font-size:16px;}
+.form-label{font-size:12px;font-weight:700;color:var(--s500);margin-bottom:6px;display:block;}
+.form-input,.form-select{width:100%;padding:12px 14px;border:1.5px solid var(--s200);border-radius:12px;font-size:14px;background:var(--card);appearance:none;font-family:inherit;margin-bottom:12px;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--teal);}
+.btn{display:block;width:100%;padding:12px;border-radius:14px;font-size:14px;font-weight:800;text-align:center;cursor:pointer;border:none;font-family:inherit;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;}
+.btn-outline{background:var(--card);color:var(--s500);border:1.5px solid var(--s200);margin-top:8px;}
+.btn-ghost{background:transparent;color:var(--s500);font-size:13px;margin-top:8px;}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;justify-content:center;}
+.modal.show{display:flex;}
+.modal-content{background:var(--bg);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-width:430px;max-height:80vh;overflow-y:auto;}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.modal-header h3{font-size:16px;font-weight:800;}
+.modal-close{width:32px;height:32px;border-radius:50%;background:var(--s100);display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-size:16px;}
+.info{padding:12px;border-radius:12px;font-size:12px;text-align:center;margin-top:12px;}
+.info.teal{background:var(--teal-l);color:var(--teal-d);}
+.loading{text-align:center;padding:60px;color:var(--s400);}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>⚙️ 設定</h1>
+</div>
+
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">⚙️</div>
+  <div>読み込み中...</div>
+</div>
+
+<div id="content" style="display:none;">
+  <div class="section">
+    <div class="card">
+      <div class="list-item" onclick="openModal('petModal')">
+        <div class="list-ico" style="background:var(--teal-l);">🐾</div>
+        <div class="list-body"><div class="lt">ペット情報編集</div><div class="lb" id="petSummary">-</div></div>
+        <div class="list-arr">›</div>
+      </div>
+      <div class="list-item" onclick="openModal('areaModal')">
+        <div class="list-ico" style="background:var(--amber-l);">📍</div>
+        <div class="list-body"><div class="lt">地域変更</div><div class="lb" id="areaSummary">-</div></div>
+        <div class="list-arr">›</div>
+      </div>
+      <div class="list-item" onclick="openFamily()">
+        <div class="list-ico" style="background:var(--rose-l);">👨‍👩‍👦</div>
+        <div class="list-body"><div class="lt">家族管理</div><div class="lb" id="familySummary">-</div></div>
+        <div class="list-arr">›</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    PawBon 元気チェック MVP v1.0<br>
+    © 2026 PawBon Inc.
+  </div>
+</div>
+
+<!-- ===== ペット編集モーダル ===== -->
+<div class="modal" id="petModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>🐾 ペット情報編集</h3>
+      <button class="modal-close" onclick="closeModal('petModal')">✕</button>
+    </div>
+    <label class="form-label">ペットの名前</label>
+    <input class="form-input" id="editPetNames" placeholder="チョコ, モカ, ラテ">
+    <label class="form-label">品種</label>
+    <input class="form-input" id="editBreeds" placeholder="柴犬, 柴犬, トイプードル">
+    <label class="form-label">頭数</label>
+    <input class="form-input" id="editPetCount" type="number" min="1" max="10">
+    <button class="btn btn-primary" onclick="savePetInfo()">保存する</button>
+    <button class="btn btn-ghost" onclick="closeModal('petModal')">キャンセル</button>
+  </div>
+</div>
+
+<!-- ===== 地域変更モーダル ===== -->
+<div class="modal" id="areaModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>📍 地域変更</h3>
+      <button class="modal-close" onclick="closeModal('areaModal')">✕</button>
+    </div>
+    <label class="form-label">都道府県</label>
+    <select class="form-select" id="editArea">
+      <option value="">選択</option>
+      <option>北海道</option><option>東京都</option><option>神奈川県</option>
+      <option>大阪府</option><option>愛知県</option><option>福岡県</option>
+    </select>
+    <label class="form-label">市区町村</label>
+    <input class="form-input" id="editAreaDetail" placeholder="世田谷区">
+    <button class="btn btn-primary" onclick="saveArea()">保存する</button>
+    <button class="btn btn-ghost" onclick="closeModal('areaModal')">キャンセル</button>
+  </div>
+</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script>
+const GAS_URL = 'https://aaa.gashi.workers.dev/';
+let lineId = '';
+let userData = null;
+
+async function initLiff() {
+  try {
+    await liff.init({ liffId: '2009150735-GT1YvHUH' });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    const profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) { lineId = 'debug_user'; }
+  loadSettings();
+}
+initLiff();
+
+async function loadSettings() {
+  try {
+    const res = await fetch(GAS_URL + '?action=getUserData&lineId=' + lineId);
+    userData = await res.json();
+    if (!userData.registered) {
+      document.getElementById('loading').innerHTML = '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です</div>';
+      return;
+    }
+    renderSettings();
+  } catch (e) {
+    userData = { registered:true, petNames:'チョコ, モカ, ラテ', breeds:'柴犬, 柴犬, トイプードル', petCount:3, area:'東京都', areaDetail:'世田谷区', familyCode:'P-8472', familyMembers:[{display_name:'おばあちゃん'},{display_name:'パパ'}] };
+    renderSettings();
+  }
+}
+
+function renderSettings() {
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+  
+  document.getElementById('petSummary').textContent = userData.petNames + '（' + userData.petCount + '匹）';
+  document.getElementById('areaSummary').textContent = userData.area + ' ' + (userData.areaDetail || '');
+  const memCount = userData.familyMembers ? userData.familyMembers.length : 0;
+  document.getElementById('familySummary').textContent = memCount + '人登録済み · コード: ' + userData.familyCode;
+  
+  // フォーム初期値
+  document.getElementById('editPetNames').value = userData.petNames;
+  document.getElementById('editBreeds').value = userData.breeds || '';
+  document.getElementById('editPetCount').value = userData.petCount;
+  document.getElementById('editArea').value = userData.area;
+  document.getElementById('editAreaDetail').value = userData.areaDetail || '';
+}
+
+function openModal(id) {
+  document.getElementById(id).classList.add('show');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('show');
+}
+
+async function savePetInfo() {
+  const payload = {
+    action: 'updateSettings',
+    lineId: lineId,
+    petNames: document.getElementById('editPetNames').value.trim(),
+    breeds: document.getElementById('editBreeds').value.trim(),
+    petCount: parseInt(document.getElementById('editPetCount').value) || 1
+  };
+  
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    closeModal('petModal');
+    alert('✅ 保存しました');
+    loadSettings();
+  } catch (e) {
+    alert('エラーが発生しました');
+  }
+}
+
+async function saveArea() {
+  const payload = {
+    action: 'updateSettings',
+    lineId: lineId,
+    area: document.getElementById('editArea').value,
+    areaDetail: document.getElementById('editAreaDetail').value.trim()
+  };
+  
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    closeModal('areaModal');
+    alert('✅ 保存しました');
+    loadSettings();
+  } catch (e) {
+    alert('エラーが発生しました');
+  }
+}
+
+function openFamily() {
+  // 家族管理LIFFに遷移
+  window.location.href = 'https://liff.line.me/YOUR_LIFF_ID_FAMILY';
+}
+</script>
+</body>
+</html>
