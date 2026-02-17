@@ -185,7 +185,6 @@ async function savePetInfo() {
   try {
     await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     closeModal('petModal');
@@ -207,7 +206,6 @@ async function saveArea() {
   try {
     await fetch(GAS_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     closeModal('areaModal');
