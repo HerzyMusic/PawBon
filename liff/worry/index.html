@@ -15,6 +15,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .pet-row{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;border:1.5px solid var(--s200);cursor:pointer;transition:all .15s;margin-bottom:8px;background:var(--card);}
 .pet-row .icon{font-size:24px;}
 .pet-row .name{flex:1;font-size:14px;font-weight:700;}
+.pet-row .breed{font-size:10px;color:var(--s400);}
 .pet-row .status{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;}
 .pet-row.ok{border-color:var(--teal);background:var(--teal-l);}
 .pet-row.ok .status{background:var(--teal);color:#fff;}
@@ -41,6 +42,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .info.amber{background:var(--amber-l);color:#92400E;border:1px solid var(--amber);}
 .loading{display:none;text-align:center;padding:40px;}
 .loading.show{display:block;}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
 </style>
 </head>
 <body>
@@ -53,10 +55,9 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
   <div class="section">
     <div id="petList">
-      <!-- ペットリストはJSで動的生成 -->
       <div style="text-align:center;padding:20px;color:var(--s400);">読み込み中...</div>
     </div>
-    
+
     <div id="symptomArea" class="symptom-area">
       <label class="form-label">心配な症状（任意）</label>
       <div class="symptom-grid" id="symptomGrid">
@@ -69,7 +70,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
         <div class="symptom-btn" onclick="toggleSymptom(this)">足を引きずる</div>
         <div class="symptom-btn" onclick="toggleSymptom(this)">その他</div>
       </div>
-      
+
       <label class="form-label">メモ（任意）</label>
       <input class="form-input" id="memo" placeholder="例：朝からご飯を食べない">
     </div>
@@ -95,128 +96,202 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   <button class="btn btn-ghost" style="margin-top:16px;" onclick="closeLiff()">閉じる</button>
 </div>
 
+<div class="footer">PawBon 元気チェック v0.3.3 Beta<br>© 2026 PawBon Inc.</div>
+
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-const GAS_URL = PAWBON_CONFIG.GAS_URL;
-let lineId = '';
-let petNames = [];
-const worriedPets = new Set();
+var GAS_URL = PAWBON_CONFIG.GAS_URL;
+var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
+var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var lineId = '';
+var familyCode = '';
+var petNames = [];
+var petBreeds = [];
+var worriedPets = {};
 
-// ===== LIFF初期化 =====
+function supaGet(path) {
+  return fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+  }).then(function(r){ return r.json(); });
+}
+
+// ═══ LIFF ═══
 async function initLiff() {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.worry });
     if (!liff.isLoggedIn()) { liff.login(); return; }
-    const profile = await liff.getProfile();
+    var profile = await liff.getProfile();
     lineId = profile.userId;
   } catch (e) {
-    lineId = 'debug_user';
+    try {
+      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
+      if (latest && latest.length > 0) lineId = latest[0].owner_line_id;
+    } catch (e2) {}
   }
   loadUserData();
 }
 initLiff();
 
-// ===== ユーザーデータ読込 =====
+// ═══ Load ═══
 async function loadUserData() {
   try {
-    const res = await fetch(GAS_URL + '?action=getUserData&lineId=' + lineId);
-    const data = await res.json();
-    
-    if (!data.registered) {
-      document.getElementById('petList').innerHTML = '<div style="text-align:center;padding:20px;">未登録です。先にペット登録をしてください。</div>';
-      return;
+    // 1. オーナーとして検索
+    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+    var family = null;
+
+    if (families && families.length > 0) {
+      family = families[0];
+    } else {
+      // 2. メンバーとして検索
+      var members = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+      if (members && members.length > 0) {
+        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(members[0].family_code) + '&limit=1');
+        if (fam && fam.length > 0) family = fam[0];
+      }
     }
-    
-    if (data.checkedInToday) {
-      document.getElementById('petList').innerHTML = '<div style="text-align:center;padding:20px;">✅ 今日はもうチェック済みです！</div>';
+
+    if (!family) {
+      document.getElementById('petList').innerHTML =
+        '<div style="text-align:center;padding:20px;">未登録です。先にペット登録をしてください。</div>';
       document.getElementById('submitBtn').style.display = 'none';
       return;
     }
-    
-    // ペットリスト生成
-    petNames = data.petNames.split(',').map(n => n.trim());
-    const icons = ['🐕','🐈','🐩','🐾'];
-    
-    document.getElementById('petList').innerHTML = petNames.map((name, i) =>
-      `<div class="pet-row ok" onclick="togglePet(this,'${name}')" data-name="${name}">
-        <div class="icon">${icons[i % icons.length]}</div>
-        <div class="name">${name}</div>
-        <div class="status">元気 ✅</div>
-      </div>`
-    ).join('');
-    
+
+    familyCode = family.family_code;
+
+    // 3. 今日のチェック済み確認
+    var today = new Date().toISOString().substring(0, 10);
+    var todayCheckins = await supaGet(
+      'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+      '&checkin_date=eq.' + today +
+      '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
+      '&limit=1'
+    );
+
+    if (todayCheckins && todayCheckins.length > 0) {
+      document.getElementById('petList').innerHTML =
+        '<div style="text-align:center;padding:20px;">✅ 今日はもうチェック済みです！</div>';
+      document.getElementById('submitBtn').style.display = 'none';
+      return;
+    }
+
+    // 4. ペットリスト生成
+    petNames = family.pet_names.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    petBreeds = (family.breeds || '').split(',').map(function(s){ return s.trim(); });
+
+    var speciesIcons = {};
+    var breedOptions = {
+      dog: ['柴犬','トイプードル','チワワ','ゴールデンレトリバー','フレンチブルドッグ','ミニチュアダックス','ポメラニアン','コーギー','MIX'],
+      cat: ['スコティッシュフォールド','マンチカン','アメリカンショートヘア','ラグドール'],
+      other: ['うさぎ','ハムスター','フェレット','鳥']
+    };
+
+    function getIcon(breed) {
+      if (!breed) return '🐾';
+      if (breedOptions.dog.indexOf(breed) !== -1) return '🐕';
+      if (breedOptions.cat.indexOf(breed) !== -1) return '🐈';
+      if (breedOptions.other.indexOf(breed) !== -1) return '🐾';
+      return '🐾';
+    }
+
+    document.getElementById('petList').innerHTML = petNames.map(function(name, i) {
+      var breed = petBreeds[i] || '';
+      var icon = getIcon(breed);
+      var breedLabel = breed ? ' · ' + escapeHtml(breed) : '';
+      return '<div class="pet-row ok" onclick="togglePet(this,\'' + escapeAttr(name) + '\')" data-name="' + escapeAttr(name) + '">' +
+        '<div class="icon">' + icon + '</div>' +
+        '<div class="name">' + escapeHtml(name) + '<span class="breed">' + breedLabel + '</span></div>' +
+        '<div class="status">元気 ✅</div>' +
+      '</div>';
+    }).join('');
+
   } catch (e) {
-    console.error('Load error:', e);
-    // デバッグ用フォールバック
-    petNames = ['チョコ','モカ','ラテ'];
-    document.getElementById('petList').innerHTML = petNames.map((name, i) =>
-      `<div class="pet-row ok" onclick="togglePet(this,'${name}')" data-name="${name}">
-        <div class="icon">${['🐕','🐕','🐩'][i]}</div>
-        <div class="name">${name}</div>
-        <div class="status">元気 ✅</div>
-      </div>`
-    ).join('');
+    document.getElementById('petList').innerHTML =
+      '<div style="text-align:center;padding:20px;color:var(--rose);">データ読み込みエラー: ' + e.message + '</div>';
   }
 }
 
-// ===== ペット切替 =====
+// ═══ Toggle ═══
 function togglePet(el, name) {
   if (el.classList.contains('ok')) {
     el.classList.remove('ok');
     el.classList.add('worried');
     el.querySelector('.status').textContent = '心配 ⚠️';
-    worriedPets.add(name);
+    worriedPets[name] = true;
   } else {
     el.classList.remove('worried');
     el.classList.add('ok');
     el.querySelector('.status').textContent = '元気 ✅';
-    worriedPets.delete(name);
+    delete worriedPets[name];
   }
-  
-  const area = document.getElementById('symptomArea');
-  area.classList.toggle('show', worriedPets.size > 0);
-  document.getElementById('submitBtn').disabled = worriedPets.size === 0;
+
+  var count = Object.keys(worriedPets).length;
+  document.getElementById('symptomArea').classList.toggle('show', count > 0);
+  document.getElementById('submitBtn').disabled = count === 0;
 }
 
 function toggleSymptom(el) {
   el.classList.toggle('selected');
 }
 
-// ===== 送信 =====
+// ═══ Submit ═══
 async function submitWorry() {
-  if (worriedPets.size === 0) return;
-  
+  var wNames = Object.keys(worriedPets);
+  if (wNames.length === 0) return;
+
   document.getElementById('main').style.display = 'none';
   document.getElementById('loading').classList.add('show');
-  
-  const symptoms = Array.from(document.querySelectorAll('.symptom-btn.selected'))
-    .map(el => el.textContent).join(', ');
-  const memo = document.getElementById('memo').value.trim();
-  
+
+  var symptoms = [];
+  document.querySelectorAll('.symptom-btn.selected').forEach(function(el) {
+    symptoms.push(el.textContent);
+  });
+  var memo = document.getElementById('memo').value.trim();
+
+  var payload = {
+    action: 'checkinWorry',
+    lineId: lineId,
+    familyCode: familyCode,
+    worriedPets: wNames.join(', '),
+    symptoms: symptoms.join(', '),
+    memo: memo
+  };
+
   try {
-    const res = await fetch(GAS_URL, {
+    // 1. GAS に送信（no-cors）
+    await fetch(GAS_URL, {
       method: 'POST',
-      body: JSON.stringify({
-        action: 'checkinWorry',
-        lineId: lineId,
-        worriedPets: Array.from(worriedPets).join(', '),
-        symptoms: symptoms,
-        memo: memo
-      })
-    });
-    const data = await res.json();
-    
+      mode: 'no-cors',
+      body: JSON.stringify(payload)
+    }).catch(function(){});
+
+    // 2. 待機
+    await new Promise(function(r){ setTimeout(r, 3000); });
+
+    // 3. Supabase で確認
+    var today = new Date().toISOString().substring(0, 10);
+    var check = await supaGet(
+      'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+      '&checkin_date=eq.' + today +
+      '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
+      '&limit=1'
+    );
+
     document.getElementById('loading').classList.remove('show');
-    
-    const wNames = Array.from(worriedPets).join('・');
-    document.getElementById('doneMsg').textContent = 
-      '⚠️ ' + wNames + 'の心配を記録しました。\n家族にも状況を伝えました。';
+
+    if (check && check.length > 0) {
+      document.getElementById('doneMsg').textContent =
+        '⚠️ ' + wNames.join('・') + 'の心配を記録しました。\n家族にも状況を伝えました。';
+    } else {
+      document.getElementById('doneMsg').textContent =
+        '⚠️ ' + wNames.join('・') + 'の心配を送信しました。\n反映に少し時間がかかる場合があります。';
+    }
     document.getElementById('done').style.display = 'block';
-    
+
   } catch (e) {
     document.getElementById('loading').classList.remove('show');
-    alert('通信エラーが発生しました');
+    alert('エラー: ' + e.message);
     document.getElementById('main').style.display = 'block';
   }
 }
@@ -224,6 +299,16 @@ async function submitWorry() {
 function closeLiff() {
   if (typeof liff !== 'undefined' && liff.isInClient()) { liff.closeWindow(); }
   else { window.close(); }
+}
+
+// ═══ Util ═══
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function escapeAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/'/g,'&#39;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 </script>
 </body>
