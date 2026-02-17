@@ -10,6 +10,7 @@
 body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:20px;}
 .header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
 .header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
 .section{padding:16px;}
 .stat-row{display:flex;gap:8px;margin-bottom:16px;}
 .stat-box{flex:1;background:var(--s100);border-radius:14px;padding:14px 8px;text-align:center;}
@@ -42,12 +43,18 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .region .num{font-size:24px;font-weight:900;color:var(--teal-d);}
 .region .txt{font-size:11px;color:var(--s500);line-height:1.4;}
 .loading{text-align:center;padding:60px 20px;color:var(--s400);}
+.pet-summary{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.pet-tag{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;background:var(--teal-l);color:var(--teal-d);}
+.empty-state{text-align:center;padding:30px 16px;color:var(--s400);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>📊 元気レポート</h1>
+  <p id="headerSub">読み込み中...</p>
 </div>
 
 <div id="loading" class="loading">
@@ -56,14 +63,17 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 </div>
 
 <div id="content" style="display:none;">
-  <!-- Stats -->
+  <!-- ペット情報 -->
   <div class="section">
+    <div id="petTags" class="pet-summary"></div>
+
+    <!-- Stats -->
     <div class="stat-row">
-      <div class="stat-box"><div class="sv rose" id="totalDays">-</div><div class="sl">トータル日数</div></div>
-      <div class="stat-box"><div class="sv teal" id="streak">-</div><div class="sl">連続日数 🔥</div></div>
+      <div class="stat-box"><div class="sv rose" id="totalDays">0</div><div class="sl">トータル日数</div></div>
+      <div class="stat-box"><div class="sv teal" id="streak">0</div><div class="sl">連続日数 🔥</div></div>
       <div class="stat-box"><div class="sv amber" id="healthRate">-</div><div class="sl">元気率</div></div>
     </div>
-    
+
     <div class="region">
       <div class="num" id="regionCount">-</div>
       <div class="txt">匹が<span id="regionArea">地域</span>で<br>今日元気です 🏘️</div>
@@ -86,133 +96,241 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
     </div>
   </div>
 
-  <!-- Recent History -->
+  <!-- History -->
   <div class="section" style="padding-top:0;">
     <div class="section-title">📋 最近のチェック履歴</div>
-    <div class="card" id="historyList" style="padding:0 16px;">
-      <!-- JS生成 -->
-    </div>
+    <div class="card" id="historyList" style="padding:0 16px;"></div>
   </div>
 </div>
+
+<div class="footer">PawBon 元気チェック v0.3.3 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-const GAS_URL = PAWBON_CONFIG.GAS_URL;
-let lineId = '';
-let reportData = null;
-let currentYear = 2026, currentMonth = 2;
+var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
+var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var lineId = '';
+var familyCode = '';
+var allRecords = [];
+var currentYear, currentMonth;
 
+function supaGet(path) {
+  return fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+  }).then(function(r){ return r.json(); });
+}
+
+// ═══ LIFF ═══
 async function initLiff() {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
     if (!liff.isLoggedIn()) { liff.login(); return; }
-    const profile = await liff.getProfile();
+    var profile = await liff.getProfile();
     lineId = profile.userId;
-  } catch (e) { lineId = 'debug_user'; }
+  } catch (e) {
+    try {
+      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
+      if (latest && latest.length > 0) lineId = latest[0].owner_line_id;
+    } catch (e2) {}
+  }
   loadReport();
 }
 initLiff();
 
+// ═══ Load ═══
 async function loadReport() {
   try {
-    const res = await fetch(GAS_URL + '?action=getReport&lineId=' + lineId);
-    reportData = await res.json();
-    
-    if (reportData.error) {
-      document.getElementById('loading').innerHTML = '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>まだ記録がありません</div>';
+    // 1. 家族を特定
+    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+    var family = null;
+
+    if (families && families.length > 0) {
+      family = families[0];
+    } else {
+      var members = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+      if (members && members.length > 0) {
+        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(members[0].family_code) + '&limit=1');
+        if (fam && fam.length > 0) family = fam[0];
+      }
+    }
+
+    if (!family) {
+      document.getElementById('loading').innerHTML =
+        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
       return;
     }
-    
-    renderReport();
+
+    familyCode = family.family_code;
+
+    // 2. 全チェックイン記録を取得
+    allRecords = await supaGet(
+      'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+      '&order=checkin_date.desc&limit=365'
+    ) || [];
+
+    // 3. 同地域の今日の元気数（概算）
+    var today = new Date().toISOString().substring(0, 10);
+    var regionCheckins = [];
+    try {
+      regionCheckins = await supaGet(
+        'checkins?checkin_date=eq.' + today + '&status=eq.genki&limit=100'
+      ) || [];
+    } catch(e3) {}
+
+    // 4. 統計計算
+    var totalDays = allRecords.length;
+    var genkiDays = allRecords.filter(function(r){ return r.status === 'genki'; }).length;
+    var healthRate = totalDays > 0 ? Math.round((genkiDays / totalDays) * 100) : 0;
+    var streak = calcStreak(allRecords);
+
+    // 5. レンダリング
+    var petNames = family.pet_names.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var petBreeds = (family.breeds || '').split(',').map(function(s){ return s.trim(); });
+
+    document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
+
+    // ペットタグ
+    document.getElementById('petTags').innerHTML = petNames.map(function(name, i) {
+      var breed = petBreeds[i] || '';
+      return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
+    }).join('');
+
+    document.getElementById('totalDays').textContent = totalDays;
+    document.getElementById('streak').textContent = streak;
+    document.getElementById('healthRate').textContent = healthRate + '%';
+    document.getElementById('regionCount').textContent = regionCheckins.length || '—';
+    document.getElementById('regionArea').textContent = family.area + ' ' + (family.area_detail || '');
+
+    var now = new Date();
+    currentYear = now.getFullYear();
+    currentMonth = now.getMonth() + 1;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    renderCalendar();
+    renderHistory();
+
   } catch (e) {
-    // デバッグ用フォールバック
-    reportData = {
-      petNames:'チョコ, モカ, ラテ', totalDays:847, streak:32, healthRate:96,
-      regionCount:143, familyCode:'P-8472',
-      records: Array.from({length:30}, (_, i) => ({
-        date: `2026-02-${String(17-i).padStart(2,'0')}`,
-        status: Math.random() > 0.1 ? 'genki' : 'worry',
-        worriedPets: 'モカ', symptoms: '食欲なし'
-      }))
-    };
-    renderReport();
+    document.getElementById('loading').innerHTML =
+      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
   }
 }
 
-function renderReport() {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('content').style.display = 'block';
-  
-  document.getElementById('totalDays').textContent = reportData.totalDays;
-  document.getElementById('streak').textContent = reportData.streak;
-  document.getElementById('healthRate').textContent = reportData.healthRate + '%';
-  document.getElementById('regionCount').textContent = reportData.regionCount || '-';
-  
-  const now = new Date();
-  currentYear = now.getFullYear();
-  currentMonth = now.getMonth() + 1;
-  renderCalendar();
-  renderHistory();
+// ═══ 連続日数計算 ═══
+function calcStreak(records) {
+  if (!records || records.length === 0) return 0;
+
+  // 日付でソート（新しい順）
+  var dates = records.map(function(r){ return r.checkin_date; }).sort().reverse();
+
+  // 今日 or 昨日から連続しているか
+  var today = new Date();
+  var streak = 0;
+  var checkDate = new Date(today);
+
+  // 今日の記録がなければ昨日から
+  var todayStr = formatDate(today);
+  if (dates.indexOf(todayStr) === -1) {
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  var dateSet = {};
+  dates.forEach(function(d){ dateSet[d] = true; });
+
+  for (var i = 0; i < 365; i++) {
+    var ds = formatDate(checkDate);
+    if (dateSet[ds]) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
 }
 
+function formatDate(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+// ═══ Calendar ═══
 function renderCalendar() {
-  document.getElementById('calTitle').textContent = `📅 ${currentYear}年${currentMonth}月`;
-  
-  const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
-  const offset = firstDay === 0 ? 6 : firstDay - 1;
-  const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-  const todayD = new Date().getDate();
-  const todayM = new Date().getMonth() + 1;
-  const todayY = new Date().getFullYear();
-  
+  document.getElementById('calTitle').textContent = '📅 ' + currentYear + '年' + currentMonth + '月';
+
+  var firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+  var offset = firstDay === 0 ? 6 : firstDay - 1; // 月曜始まり
+  var daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  var now = new Date();
+  var todayD = now.getDate();
+  var todayM = now.getMonth() + 1;
+  var todayY = now.getFullYear();
+
   // 記録をdateでマッピング
-  const dateMap = {};
-  if (reportData && reportData.records) {
-    reportData.records.forEach(r => {
-      dateMap[r.date] = r.status;
-    });
-  }
-  
-  let html = '<div class="cal-day-label">月</div><div class="cal-day-label">火</div><div class="cal-day-label">水</div><div class="cal-day-label">木</div><div class="cal-day-label">金</div><div class="cal-day-label">土</div><div class="cal-day-label">日</div>';
-  
-  for (let i = 0; i < offset; i++) html += '<div class="cal-day"></div>';
-  
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const status = dateMap[dateStr];
-    let cls = 'cal-day';
+  var dateMap = {};
+  allRecords.forEach(function(r) {
+    dateMap[r.checkin_date] = r.status;
+  });
+
+  var html = '';
+  var labels = ['月','火','水','木','金','土','日'];
+  labels.forEach(function(l) {
+    html += '<div class="cal-day-label">' + l + '</div>';
+  });
+
+  for (var i = 0; i < offset; i++) html += '<div class="cal-day"></div>';
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = currentYear + '-' + String(currentMonth).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var status = dateMap[ds];
+    var cls = 'cal-day';
     if (status === 'genki') cls += ' genki';
     else if (status === 'worry') cls += ' worry';
     if (d === todayD && currentMonth === todayM && currentYear === todayY) cls += ' today';
-    html += `<div class="${cls}">${d}</div>`;
+    html += '<div class="' + cls + '">' + d + '</div>';
   }
-  
+
   document.getElementById('calGrid').innerHTML = html;
 }
 
-function changeMonth(d) {
-  currentMonth += d;
+function changeMonth(dir) {
+  currentMonth += dir;
   if (currentMonth > 12) { currentMonth = 1; currentYear++; }
   if (currentMonth < 1) { currentMonth = 12; currentYear--; }
   renderCalendar();
 }
 
+// ═══ History ═══
 function renderHistory() {
-  if (!reportData || !reportData.records) return;
-  
-  const weekdays = ['日','月','火','水','木','金','土'];
-  
-  document.getElementById('historyList').innerHTML = reportData.records.slice(0, 14).map(r => {
-    const d = new Date(r.date);
-    const dayLabel = `${d.getMonth()+1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
-    
+  var container = document.getElementById('historyList');
+  if (!allRecords || allRecords.length === 0) {
+    container.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--s400);font-size:12px;">まだチェック記録がありません</div>';
+    return;
+  }
+
+  var weekdays = ['日','月','火','水','木','金','土'];
+  container.innerHTML = allRecords.slice(0, 14).map(function(r) {
+    var d = new Date(r.checkin_date);
+    var label = (d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）';
     if (r.status === 'genki') {
-      return `<div class="record-row"><span class="date">${dayLabel}</span><span class="status-g">✅ 全員元気</span></div>`;
+      return '<div class="record-row"><span class="date">' + label + '</span><span class="status-g">✅ 全員元気</span></div>';
     } else {
-      return `<div class="record-row"><span class="date">${dayLabel}</span><span class="status-w">⚠️ ${r.worriedPets || '心配'}${r.symptoms ? '（'+r.symptoms+')' : ''}</span></div>`;
+      var detail = escapeHtml(r.worried_pets || '心配');
+      if (r.symptoms) detail += '（' + escapeHtml(r.symptoms) + '）';
+      return '<div class="record-row"><span class="date">' + label + '</span><span class="status-w">⚠️ ' + detail + '</span></div>';
     }
   }).join('');
+}
+
+// ═══ Util ═══
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }
 </script>
 </body>
