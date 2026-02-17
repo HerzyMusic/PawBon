@@ -138,9 +138,22 @@ async function initLiff() {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.settings });
     if (!liff.isLoggedIn()) { liff.login(); return; }
-    const profile = await liff.getProfile();
+    var profile = await liff.getProfile();
     lineId = profile.userId;
-  } catch (e) { lineId = 'debug_user'; }
+    console.log('LIFF OK, lineId:', lineId);
+  } catch (e) {
+    console.error('LIFF init error:', e);
+    // LIFF外の場合: Supabaseから最新の登録者を取得して表示
+    try {
+      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
+      if (latest && latest.length > 0) {
+        lineId = latest[0].owner_line_id;
+        console.log('デバッグモード: 最新ユーザーを使用:', lineId);
+      }
+    } catch (e2) {
+      console.error('デバッグ取得エラー:', e2);
+    }
+  }
   loadSettings();
 }
 initLiff();
