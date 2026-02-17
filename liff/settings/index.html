@@ -89,7 +89,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.1 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.3.2 Beta<br>© 2026 PawBon Inc.</div>
 
 <!-- ===== 個人情報モーダル ===== -->
 <div class="modal" id="profileModal">
@@ -221,8 +221,7 @@ async function loadSettings() {
 
     if (!family) {
       document.getElementById('loading').innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>' +
-        '<div style="margin-top:16px;padding:12px;background:#fff;border-radius:12px;font-size:11px;color:#94A3B8;word-break:break-all;"><strong>デバッグ:</strong> lineId=' + lineId + '</div>';
+        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
       return;
     }
 
