@@ -120,8 +120,19 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 <script src="../config.js"></script>
 <script>
 const GAS_URL = PAWBON_CONFIG.GAS_URL;
+const SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
+const SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
 let lineId = '';
 let userData = null;
+
+function supaGet(path) {
+  return fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': 'Bearer ' + SUPA_KEY
+    }
+  }).then(function(r){ return r.json(); });
+}
 
 async function initLiff() {
   try {
@@ -136,16 +147,47 @@ initLiff();
 
 async function loadSettings() {
   try {
-    const res = await fetch(GAS_URL + '?action=getUserData&lineId=' + lineId);
-    userData = await res.json();
-    if (!userData.registered) {
-      document.getElementById('loading').innerHTML = '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です</div>';
+    // 1. pet_families からオーナー情報を取得
+    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+    
+    // オーナーとして見つからなければ、family_members から探す
+    var role = 'owner';
+    var family = null;
+    
+    if (families && families.length > 0) {
+      family = families[0];
+    } else {
+      var members = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+      if (members && members.length > 0) {
+        role = 'member';
+        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(members[0].family_code) + '&limit=1');
+        if (fam && fam.length > 0) family = fam[0];
+      }
+    }
+    
+    if (!family) {
+      document.getElementById('loading').innerHTML = '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
       return;
     }
+    
+    // 2. family_members を取得
+    var allMembers = await supaGet('family_members?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=registered_at.asc');
+    
+    userData = {
+      registered: true,
+      role: role,
+      familyCode: family.family_code,
+      petNames: family.pet_names,
+      breeds: family.breeds || '',
+      petCount: family.pet_count,
+      area: family.area,
+      areaDetail: family.area_detail || '',
+      familyMembers: allMembers || []
+    };
+    
     renderSettings();
   } catch (e) {
-    userData = { registered:true, petNames:'チョコ, モカ, ラテ', breeds:'柴犬, 柴犬, トイプードル', petCount:3, area:'東京都', areaDetail:'世田谷区', familyCode:'P-8472', familyMembers:[{display_name:'おばあちゃん'},{display_name:'パパ'}] };
-    renderSettings();
+    document.getElementById('loading').innerHTML = '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>データ読み込みエラー: ' + e.message + '</div>';
   }
 }
 
@@ -155,10 +197,10 @@ function renderSettings() {
   
   document.getElementById('petSummary').textContent = userData.petNames + '（' + userData.petCount + '匹）';
   document.getElementById('areaSummary').textContent = userData.area + ' ' + (userData.areaDetail || '');
-  const memCount = userData.familyMembers ? userData.familyMembers.length : 0;
+  var memCount = userData.familyMembers ? userData.familyMembers.length : 0;
   document.getElementById('familySummary').textContent = memCount + '人登録済み · コード: ' + userData.familyCode;
   
-  // フォーム初期値
+  // フォーム初期値セット
   document.getElementById('editPetNames').value = userData.petNames;
   document.getElementById('editBreeds').value = userData.breeds || '';
   document.getElementById('editPetCount').value = userData.petCount;
@@ -174,50 +216,57 @@ function closeModal(id) {
 }
 
 async function savePetInfo() {
-  const payload = {
-    action: 'updateSettings',
-    lineId: lineId,
-    petNames: document.getElementById('editPetNames').value.trim(),
+  var updates = {
+    pet_names: document.getElementById('editPetNames').value.trim(),
     breeds: document.getElementById('editBreeds').value.trim(),
-    petCount: parseInt(document.getElementById('editPetCount').value) || 1
+    pet_count: parseInt(document.getElementById('editPetCount').value) || 1
   };
   
   try {
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    await fetch(SUPA_URL + '/rest/v1/pet_families?family_code=eq.' + encodeURIComponent(userData.familyCode), {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(updates)
     });
     closeModal('petModal');
     alert('✅ 保存しました');
     loadSettings();
   } catch (e) {
-    alert('エラーが発生しました');
+    alert('エラー: ' + e.message);
   }
 }
 
 async function saveArea() {
-  const payload = {
-    action: 'updateSettings',
-    lineId: lineId,
+  var updates = {
     area: document.getElementById('editArea').value,
-    areaDetail: document.getElementById('editAreaDetail').value.trim()
+    area_detail: document.getElementById('editAreaDetail').value.trim()
   };
   
   try {
-    await fetch(GAS_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
+    await fetch(SUPA_URL + '/rest/v1/pet_families?family_code=eq.' + encodeURIComponent(userData.familyCode), {
+      method: 'PATCH',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify(updates)
     });
     closeModal('areaModal');
     alert('✅ 保存しました');
     loadSettings();
   } catch (e) {
-    alert('エラーが発生しました');
+    alert('エラー: ' + e.message);
   }
 }
 
 function openFamily() {
-  // 家族管理LIFFに遷移
   window.location.href = 'https://liff.line.me/' + PAWBON_CONFIG.LIFF_ID.family;
 }
 </script>
