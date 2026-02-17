@@ -256,25 +256,32 @@ async function submitRegister() {
   };
   
   try {
-    const res = await fetch(GAS_URL, {
+    // 1. 登録リクエスト送信（レスポンスは読めない場合がある）
+    await fetch(GAS_URL, {
       method: 'POST',
       body: JSON.stringify(payload)
-    });
-    const data = await res.json();
+    }).catch(function(){});
+    
+    // 2. 少し待ってから GET で登録確認
+    await new Promise(function(r){ setTimeout(r, 2000); });
+    
+    var checkUrl = GAS_URL + '?action=getUserData&lineId=' + encodeURIComponent(state.lineId);
+    var checkRes = await fetch(checkUrl);
+    var checkData = await checkRes.json();
     
     document.getElementById('loading').classList.remove('show');
     
-    if (data.success) {
-      document.getElementById('familyCodeDisplay').textContent = data.familyCode;
+    if (checkData && checkData.registered && checkData.familyCode) {
+      document.getElementById('familyCodeDisplay').textContent = checkData.familyCode;
       document.getElementById('doneMsg').textContent = payload.petNames + 'の情報を保存しました';
       show('step4');
     } else {
-      alert(data.message || '登録に失敗しました');
+      alert('登録確認中にエラーが発生しました。もう一度お試しください。');
       show('step3');
     }
   } catch (e) {
     document.getElementById('loading').classList.remove('show');
-    alert('通信エラーが発生しました');
+    alert('エラー: ' + e.message);
     show('step3');
   }
 }
