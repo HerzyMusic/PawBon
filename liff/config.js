@@ -14,6 +14,9 @@ const PAWBON_CONFIG = {
   // ─────────────────────────────
   GAS_URL: 'https://aaa.gashi.workers.dev/',
 
+  SUPABASE_URL: 'https://jzkihezfmptrhfyiqqxk.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_vtd1CFDs_9GAVawJVTOWsQ_qp-fr2HY',
+  
   // ─────────────────────────────
   // ② LIFF ID（6個）
   //   LINE Developers → LIFF タブで取得
