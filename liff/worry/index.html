@@ -96,7 +96,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   <button class="btn btn-ghost" style="margin-top:16px;" onclick="closeLiff()">閉じる</button>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.3 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.4.3 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -162,12 +162,26 @@ async function loadUserData() {
 
     // 3. 今日のチェック済み確認
     var today = new Date().toISOString().substring(0, 10);
-    var todayCheckins = await supaGet(
-      'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
-      '&checkin_date=eq.' + today +
-      '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
-      '&limit=1'
-    );
+    var todayCheckins = [];
+    try {
+      todayCheckins = await supaGet(
+        'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+        '&checkin_date=eq.' + today +
+        '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
+        '&limit=1'
+      );
+    } catch(ec) {}
+    if (!Array.isArray(todayCheckins)) {
+      try {
+        todayCheckins = await supaGet(
+          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+          '&check_date=eq.' + today +
+          '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
+          '&limit=1'
+        );
+      } catch(ec2) {}
+    }
+    if (!Array.isArray(todayCheckins)) todayCheckins = [];
 
     if (todayCheckins && todayCheckins.length > 0) {
       document.getElementById('petList').innerHTML =
@@ -271,12 +285,26 @@ async function submitWorry() {
 
     // 3. Supabase で確認
     var today = new Date().toISOString().substring(0, 10);
-    var check = await supaGet(
-      'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
-      '&checkin_date=eq.' + today +
-      '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
-      '&limit=1'
-    );
+    var check = [];
+    try {
+      check = await supaGet(
+        'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+        '&checkin_date=eq.' + today +
+        '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
+        '&limit=1'
+      );
+    } catch(vc) {}
+    if (!Array.isArray(check)) {
+      try {
+        check = await supaGet(
+          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+          '&check_date=eq.' + today +
+          '&reporter_line_id=eq.' + encodeURIComponent(lineId) +
+          '&limit=1'
+        );
+      } catch(vc2) {}
+    }
+    if (!Array.isArray(check)) check = [];
 
     document.getElementById('loading').classList.remove('show');
 
