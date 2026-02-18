@@ -30,6 +30,18 @@ const PAWBON_CONFIG = {
     settings:    '2009150735-GT1YvHUH',
   },
 
+    // ─────────────────────────────
+  // ④ LINE 公式アカウント
+  // ─────────────────────────────
+  LINE_BOT_ID: '@689imzld',   // 例: @123abcde
+  LINE_ADD_FRIEND_URL: 'https://line.me/R/ti/p/@YOUR_BOT_ID',
+
+  // ─────────────────────────────
+  // ⑤ LIFF ページのベースURL（GitHub Pages）
+  // ─────────────────────────────
+   LIFF_BASE_URL: 'https://herzymusic.github.io/PawBon/liff/',
+
+
   // ─────────────────────────────
   // ③ デバッグモード
   //   true: LIFF外（PCブラウザ等）でも動作確認可能
