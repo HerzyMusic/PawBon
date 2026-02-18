@@ -87,6 +87,19 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
       </div>
     </div>
   </div>
+  <!-- OpenChatリンク（紐づけ済みの場合のみ表示） -->
+  <div class="section" style="padding-top:0;display:none;" id="ocSection">
+    <div class="section-title">💬 地域コミュニティ</div>
+    <div class="card">
+      <div class="list-item" onclick="openOpenChat()" id="ocItem">
+        <div class="list-ico" style="background:#E8F8ED;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 2C6.48 2 2 5.92 2 10.66c0 2.94 1.88 5.53 4.72 7.04l-.56 3.3 3.72-2.02C10.55 19.32 11.26 19.46 12 19.46c5.52 0 10-3.92 10-8.8C22 5.92 17.52 2 12 2z" fill="#06c755"/></svg>
+        </div>
+        <div class="list-body"><div class="lt" id="ocName">OpenChat</div><div class="lb" id="ocDesc">地域のペット仲間とつながろう</div></div>
+        <div class="list-arr" style="color:#06c755;font-weight:700;">›</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
@@ -232,6 +245,15 @@ async function loadSettings() {
 
     var allMembers = await supaGet('family_members?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=registered_at.asc');
 
+    // OpenChat紐づけ情報を取得
+    var ocData = null;
+    if (family.openchat_id) {
+      try {
+        var ocs = await supaGet('openchats?id=eq.' + family.openchat_id + '&limit=1');
+        if (Array.isArray(ocs) && ocs.length > 0) ocData = ocs[0];
+      } catch(e) {}
+    }
+
     userData = {
       role: role,
       familyCode: family.family_code,
@@ -241,7 +263,8 @@ async function loadSettings() {
       area: family.area,
       areaDetail: family.area_detail || '',
       familyMembers: allMembers || [],
-      myMember: myMember
+      myMember: myMember,
+      openchat: ocData
     };
     renderSettings();
   } catch (e) {
@@ -265,6 +288,15 @@ function renderSettings() {
   document.getElementById('areaSummary').textContent = userData.area + ' ' + (userData.areaDetail || '');
   var memCount = userData.familyMembers ? userData.familyMembers.length : 0;
   document.getElementById('familySummary').textContent = memCount + '人登録済み · コード: ' + userData.familyCode;
+
+  // OpenChatリンク表示
+  if (userData.openchat && userData.openchat.url) {
+    document.getElementById('ocSection').style.display = '';
+    document.getElementById('ocName').textContent = userData.openchat.name || 'OpenChat';
+    var area = (userData.openchat.area || '') + (userData.openchat.area_detail ? ' ' + userData.openchat.area_detail : '');
+    var members = userData.openchat.member_count ? userData.openchat.member_count + '人参加中' : '';
+    document.getElementById('ocDesc').textContent = (area ? area + ' · ' : '') + (members || '地域のペット仲間とつながろう');
+  }
 
   // Profile defaults
   document.getElementById('editDisplayName').value = myName !== '-' ? myName : '';
@@ -318,6 +350,11 @@ function renderSettings() {
 // ═══ Modal ═══
 function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openOpenChat() {
+  if (userData && userData.openchat && userData.openchat.url) {
+    window.open(userData.openchat.url, '_blank');
+  }
+}
 
 // ═══ Profile ═══
 function selectRelation(el, val) {
