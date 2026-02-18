@@ -89,7 +89,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.2 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
 
 <!-- ===== 個人情報モーダル ===== -->
 <div class="modal" id="profileModal">
@@ -293,6 +293,26 @@ function renderSettings() {
   document.getElementById('editArea').value = userData.area;
   onEditAreaChange();
   document.getElementById('editAreaDetail').value = userData.areaDetail || '';
+
+  // ═══ メンバーはペット・地域を閲覧のみ ═══
+  if (userData.role === 'member') {
+    // ペット情報 → クリック無効化 + ラベル変更
+    var petItem = document.querySelector('[onclick="openPetModal()"]');
+    if (petItem) {
+      petItem.removeAttribute('onclick');
+      petItem.style.cursor = 'default';
+      petItem.querySelector('.lt').textContent = 'ペット情報（閲覧のみ）';
+      petItem.querySelector('.list-arr').textContent = '🔒';
+    }
+    // 地域 → クリック無効化 + ラベル変更
+    var areaItem = document.querySelector('[onclick="openModal(\'areaModal\')"]');
+    if (areaItem) {
+      areaItem.removeAttribute('onclick');
+      areaItem.style.cursor = 'default';
+      areaItem.querySelector('.lt').textContent = '地域（閲覧のみ）';
+      areaItem.querySelector('.list-arr').textContent = '🔒';
+    }
+  }
 }
 
 // ═══ Modal ═══
