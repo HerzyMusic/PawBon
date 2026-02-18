@@ -73,13 +73,13 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
     <div class="center" style="margin-bottom:24px;">
       <div style="font-size:56px;">🔑</div>
       <p style="font-size:13px;color:var(--s500);margin-top:8px;line-height:1.6;">
-        家族からもらった<br>4桁コードを入力してください
+        家族からもらった<br>コードを入力してください
       </p>
     </div>
     <div class="form-label">🔑 家族コード</div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
       <span style="font-size:18px;font-weight:700;color:var(--s400);flex-shrink:0;">P-</span>
-      <input class="form-input" id="codeInput" maxlength="4" inputmode="numeric" pattern="[0-9]*" placeholder="0000" autocomplete="off">
+      <input class="form-input" id="codeInput" maxlength="6" inputmode="text" placeholder="A3K7M2" autocomplete="off" style="text-transform:uppercase;">
     </div>
     <div class="error-msg" id="codeError"></div>
     <button class="btn btn-primary mt16" id="verifyBtn" onclick="verifyCode()" disabled>確認する</button>
@@ -170,7 +170,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   <div id="loadingText" style="font-size:14px;color:var(--s500);">確認中...</div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.3 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -216,11 +216,11 @@ async function initLiff() {
     displayName = 'デバッグユーザー';
   }
 
-  // URLパラメータからコード自動入力
+  // URLパラメータからコード自動入力（旧4桁数字 or 新6桁英数字）
   var params = new URLSearchParams(window.location.search);
   var preCode = params.get('code');
-  if (preCode && /^\d{4}$/.test(preCode)) {
-    document.getElementById('codeInput').value = preCode;
+  if (preCode && /^[A-Za-z0-9]{4,6}$/.test(preCode)) {
+    document.getElementById('codeInput').value = preCode.toUpperCase();
     document.getElementById('verifyBtn').disabled = false;
     setTimeout(function(){ verifyCode(); }, 300);
   }
@@ -241,19 +241,22 @@ function goBack(step) {
 // ═══ コード入力 ═══
 var codeInput = document.getElementById('codeInput');
 codeInput.addEventListener('input', function() {
-  this.value = this.value.replace(/[^\d]/g, '').slice(0, 4);
-  document.getElementById('verifyBtn').disabled = this.value.length !== 4;
+  this.value = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6);
+  var len = this.value.length;
+  document.getElementById('verifyBtn').disabled = (len < 4 || len > 6);
   document.getElementById('codeError').classList.remove('show');
   this.classList.remove('error');
 });
 codeInput.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && this.value.length === 4) verifyCode();
+  var len = this.value.length;
+  if (e.key === 'Enter' && len >= 4 && len <= 6) verifyCode();
 });
 
 // ═══ STEP 1 → コード検証（Supabase直接） ═══
 async function verifyCode() {
-  var code = 'P-' + codeInput.value.trim();
-  if (codeInput.value.length !== 4) return;
+  var rawCode = codeInput.value.trim().toUpperCase();
+  var code = 'P-' + rawCode;
+  if (rawCode.length < 4 || rawCode.length > 6) return;
 
   hide('step1');
   document.getElementById('loadingText').textContent = 'コードを確認中...';
