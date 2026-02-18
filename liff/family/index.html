@@ -31,6 +31,24 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .member-info .name{font-size:14px;font-weight:700;}
 .member-info .detail{font-size:10px;color:var(--s400);}
 .member-status{font-size:10px;padding:4px 8px;border-radius:20px;font-weight:700;background:var(--teal-l);color:var(--teal-d);}
+
+/* Delete button on member card */
+.member-delete{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--s200);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;transition:all .15s;}
+.member-delete:hover{border-color:var(--rose);background:var(--rose-l);color:var(--rose);}
+.member-delete:active{transform:scale(.9);}
+
+/* Owner card in member view */
+.owner-card{display:flex;align-items:center;gap:12px;padding:14px;background:var(--amber-l);border-radius:14px;border:1.5px solid var(--amber);}
+.owner-card .av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--card);border:2px solid var(--amber);flex-shrink:0;}
+.owner-card .info-col{flex:1;}
+.owner-card .info-col .name{font-size:14px;font-weight:800;}
+.owner-card .info-col .sub{font-size:11px;color:var(--s500);margin-top:2px;}
+.owner-card .badge-owner{font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--amber);color:#fff;flex-shrink:0;}
+
+/* My info card */
+.my-info-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;}
+.my-info-row .label{color:var(--s400);}
+.my-info-row .val{font-weight:700;}
 .card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
 .info{padding:12px;border-radius:12px;font-size:12px;text-align:center;margin-bottom:12px;}
 .info.amber{background:var(--amber-l);color:var(--orange);border:1px solid var(--amber);}
@@ -192,18 +210,34 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 
 <!-- ═══ メンバービュー ═══ -->
 <div id="memberView" style="display:none;">
+  <!-- ペット情報 -->
   <div class="section">
     <div class="card" style="text-align:center;background:var(--teal-l);border:1.5px solid var(--teal);">
       <div style="font-size:28px;">🐕</div>
       <div style="font-size:16px;font-weight:800;margin-top:6px;" id="memberPets">-</div>
       <div style="font-size:11px;color:var(--s400);margin-top:2px;" id="memberArea">-</div>
     </div>
-    <div class="info teal">💌 あなたは家族メンバーとして登録されています</div>
   </div>
+
+  <!-- 管理者（オーナー）情報 -->
   <div class="section" style="padding-top:0;">
-    <div class="section-title">👨‍👩‍👦 家族メンバー</div>
+    <div class="section-title">🏠 管理者（飼い主さん）</div>
+    <div id="memberOwnerCard"></div>
+  </div>
+
+  <!-- 他の家族メンバー -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title" id="memberOthersTitle">👨‍👩‍👦 他の家族メンバー</div>
     <div id="memberFamilyList"></div>
   </div>
+
+  <!-- あなたの情報 -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">📋 あなたの登録情報</div>
+    <div class="card" id="memberMyInfo" style="padding:14px 16px;"></div>
+  </div>
+
+  <!-- チェック履歴 -->
   <div class="section" style="padding-top:0;">
     <div class="section-title">📋 最近の元気チェック</div>
     <div class="card" id="memberHistory" style="padding:0 16px;">
@@ -387,7 +421,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.7 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.3.8 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -463,9 +497,18 @@ async function loadFamily() {
       familyCode: family.family_code,
       petNames: family.pet_names,
       area: family.area + ' ' + (family.area_detail || ''),
+      ownerLineId: family.owner_line_id,
+      ownerName: family.owner_name || '',
       members: allMembers,
       recentCheckins: recentCheckins
     };
+
+    // オーナーの表示名をメンバーリストから取得
+    allMembers.forEach(function(m) {
+      if (m.member_line_id === family.owner_line_id && m.relation === 'オーナー') {
+        familyData.ownerName = m.display_name || familyData.ownerName;
+      }
+    });
 
     document.getElementById('loading').style.display = 'none';
 
@@ -487,7 +530,7 @@ var relationIcons = {
   '兄弟・姉妹':'👦','友人':'👫','ペットシッター':'🧑‍⚕️'
 };
 
-function renderMemberCards(members, containerId) {
+function renderMemberCards(members, containerId, showDelete) {
   var container = document.getElementById(containerId);
   if (!members || members.length === 0) {
     container.innerHTML = '<div class="empty"><div class="icon">👋</div>まだ家族が登録されていません<br><br>上のボタンから招待しましょう！</div>';
@@ -496,6 +539,11 @@ function renderMemberCards(members, containerId) {
   container.innerHTML = members.map(function(m) {
     var icon = relationIcons[m.relation] || '👤';
     var date = m.registered_at ? m.registered_at.substring(0, 10) : '';
+    var deleteBtn = '';
+    if (showDelete) {
+      deleteBtn = '<div class="member-delete" onclick="confirmDeleteMember(\'' +
+        escapeHtml(m.member_line_id) + '\',\'' + escapeHtml(m.display_name) + '\')" title="削除">✕</div>';
+    }
     return '<div class="member-card">' +
       '<div class="member-av">' + icon + '</div>' +
       '<div class="member-info">' +
@@ -503,6 +551,7 @@ function renderMemberCards(members, containerId) {
         '<div class="detail">' + escapeHtml(m.relation || '') + ' · ' + date + ' 登録</div>' +
       '</div>' +
       '<div class="member-status">通知ON</div>' +
+      deleteBtn +
     '</div>';
   }).join('');
 }
@@ -558,13 +607,10 @@ function renderOwnerView() {
     quotaInfo.innerHTML = '<div class="info rose">🔒 ' + parts.join(' / ') + '<br>メンバー枠がいっぱいです。下から枠を追加してください</div>';
   }
 
-  // シェアボタン：枠がいっぱいの場合は無効化
-  // （コードは見せるが、参加側で制限するので送信自体は許可）
-
-  renderMemberCards(otherMembers, 'memberList');
+  // メンバーカード（削除ボタン付き）
+  renderMemberCards(otherMembers, 'memberList', true);
   renderCheckins(familyData.recentCheckins, 'ownerHistory');
 
-  // 枠に余裕がある場合はアップグレードセクションを目立たなくする
   if (remaining > 2) {
     document.getElementById('upgradeSection').style.display = 'none';
   }
@@ -572,11 +618,86 @@ function renderOwnerView() {
 
 function renderMemberView() {
   document.getElementById('memberView').style.display = 'block';
-  document.getElementById('headerSub').textContent = '家族メンバー';
+  document.getElementById('headerSub').textContent = familyData.petNames + ' · 家族メンバー';
   document.getElementById('memberPets').textContent = '🐾 ' + familyData.petNames;
   document.getElementById('memberArea').textContent = '📍 ' + familyData.area;
-  renderMemberCards(familyData.members, 'memberFamilyList');
+
+  // 管理者（オーナー）カード
+  var ownerName = familyData.ownerName || '飼い主さん';
+  var ownerMember = null;
+  familyData.members.forEach(function(m) {
+    if (m.member_line_id === familyData.ownerLineId) ownerMember = m;
+  });
+  var ownerDate = ownerMember && ownerMember.registered_at ? ownerMember.registered_at.substring(0, 10) + ' 登録' : '';
+  document.getElementById('memberOwnerCard').innerHTML =
+    '<div class="owner-card">' +
+      '<div class="av">🏠</div>' +
+      '<div class="info-col">' +
+        '<div class="name">' + escapeHtml(ownerName) + '</div>' +
+        '<div class="sub">🐾 ' + escapeHtml(familyData.petNames) + ' · ' + ownerDate + '</div>' +
+      '</div>' +
+      '<div class="badge-owner">管理者</div>' +
+    '</div>';
+
+  // 他の家族メンバー（自分とオーナーを除外）
+  var otherMembers = familyData.members.filter(function(m) {
+    return m.member_line_id !== lineId && m.member_line_id !== familyData.ownerLineId;
+  });
+
+  if (otherMembers.length > 0) {
+    document.getElementById('memberOthersTitle').style.display = '';
+    renderMemberCards(otherMembers, 'memberFamilyList', false);
+  } else {
+    document.getElementById('memberOthersTitle').style.display = 'none';
+    document.getElementById('memberFamilyList').innerHTML =
+      '<div style="text-align:center;padding:12px;color:var(--s400);font-size:12px;">あなた以外の家族メンバーはまだいません</div>';
+  }
+
+  // あなたの情報
+  var myMember = null;
+  familyData.members.forEach(function(m) {
+    if (m.member_line_id === lineId) myMember = m;
+  });
+  if (myMember) {
+    var myIcon = relationIcons[myMember.relation] || '👤';
+    var myDate = myMember.registered_at ? myMember.registered_at.substring(0, 10) : '-';
+    document.getElementById('memberMyInfo').innerHTML =
+      '<div class="my-info-row"><span class="label">続柄</span><span class="val">' + myIcon + ' ' + escapeHtml(myMember.relation || '') + '</span></div>' +
+      '<div class="my-info-row"><span class="label">表示名</span><span class="val">' + escapeHtml(myMember.display_name || '') + '</span></div>' +
+      '<div class="my-info-row"><span class="label">登録日</span><span class="val">' + myDate + '</span></div>';
+  }
+
   renderCheckins(familyData.recentCheckins, 'memberHistory');
+}
+
+// ═══ メンバー削除 ═══
+function confirmDeleteMember(memberLineId, displayName) {
+  if (confirm('⚠️ 「' + displayName + '」を家族から削除しますか？\n\nこの操作は取り消せません。\n削除すると、この方には元気チェックの通知が届かなくなります。')) {
+    deleteMember(memberLineId, displayName);
+  }
+}
+
+async function deleteMember(memberLineId, displayName) {
+  try {
+    var res = await fetch(SUPA_URL + '/rest/v1/family_members?family_code=eq.' + encodeURIComponent(familyData.familyCode) + '&member_line_id=eq.' + encodeURIComponent(memberLineId), {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      }
+    });
+    if (res.ok) {
+      alert('✅ 「' + displayName + '」を削除しました');
+      // メンバーリストを更新
+      familyData.members = familyData.members.filter(function(m) { return m.member_line_id !== memberLineId; });
+      renderOwnerView();
+    } else {
+      var err = await res.text();
+      alert('❌ 削除エラー: ' + err);
+    }
+  } catch(e) {
+    alert('❌ 通信エラー: ' + e.message);
+  }
 }
 
 // ═══ LINE シェア（Flex Message + 参加リンク付き） ═══
