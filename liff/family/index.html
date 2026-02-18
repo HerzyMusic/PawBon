@@ -421,10 +421,10 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.4.1 Beta<br>© 2026 PawBon Inc.<br><span id="diagInfo" style="font-size:9px;color:#CBD5E1;word-break:break-all;"></span></div>
+<div class="footer">PawBon 元気チェック v0.4.2 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="../config.js?v=041"></script>
+<script src="../config.js"></script>
 <script>
 var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
 var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
@@ -442,40 +442,25 @@ function supaGet(path) {
 }
 
 // ═══ LIFF ═══
-function diag(msg) {
-  var el = document.getElementById('diagInfo');
-  if (el) el.textContent += msg + ' | ';
-}
-
 async function initLiff() {
-  diag('init start');
-  
-  // URLパラメータ優先（テスト用: ?lineId=Uxxxxx）
   var params = new URLSearchParams(window.location.search);
   var paramId = params.get('lineId') || params.get('lineid');
   if (paramId) {
     lineId = paramId;
-    diag('URL param: ' + lineId.substring(0, 10));
     loadFamily();
     return;
   }
 
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.family });
-    if (!liff.isLoggedIn()) { diag('not logged in, redirecting'); liff.login(); return; }
+    if (!liff.isLoggedIn()) { liff.login(); return; }
     var profile = await liff.getProfile();
     lineId = profile.userId;
-    diag('LIFF OK: ' + lineId.substring(0, 10));
   } catch (e) {
-    diag('LIFF fail: ' + e.message);
-    // LIFF外フォールバック（ブラウザテスト用）
     try {
       var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
-      if (Array.isArray(latest) && latest.length > 0) {
-        lineId = latest[0].owner_line_id;
-        diag('fallback owner: ' + lineId.substring(0, 10));
-      }
-    } catch (e2) { diag('fallback fail'); }
+      if (Array.isArray(latest) && latest.length > 0) lineId = latest[0].owner_line_id;
+    } catch (e2) {}
   }
   if (lineId) {
     loadFamily();
@@ -497,29 +482,21 @@ async function loadFamily() {
     if (Array.isArray(families) && families.length > 0) {
       family = families[0];
       role = 'owner';
-      diag('owner match: ' + family.family_code);
-    } else {
-      diag('not owner');
     }
 
     // 2. オーナーでない場合、メンバーレコードを検索
     if (!family) {
       var memberRecords = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&order=registered_at.desc');
       var memberOf = Array.isArray(memberRecords) ? memberRecords : [];
-      diag('member records: ' + memberOf.length);
 
       for (var i = 0; i < memberOf.length; i++) {
         var mCode = memberOf[i].family_code;
         var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(mCode) + '&limit=1');
         if (Array.isArray(fam) && fam.length > 0) {
-          diag('fam ' + mCode + ' owner=' + fam[0].owner_line_id.substring(0, 8) + ' me=' + lineId.substring(0, 8));
           if (fam[0].owner_line_id !== lineId) {
             family = fam[0];
             role = 'member';
-            diag('→ MEMBER');
             break;
-          } else {
-            diag('→ skip (is owner)');
           }
         }
       }
@@ -560,7 +537,6 @@ async function loadFamily() {
     });
 
     document.getElementById('loading').style.display = 'none';
-    diag('RENDER: ' + role);
 
     if (role === 'owner') {
       renderOwnerView();
