@@ -318,7 +318,8 @@ function goStep3() {
   var ownerName = document.getElementById('ownerName').value.trim();
   var petData = collectPetData();
   var detail = document.getElementById('areaDetail').value || '';
-  var referralCode = (document.getElementById('referralInput').value || '').trim().toUpperCase();
+  var refEl = document.getElementById('referralInput');
+  var referralCode = refEl ? (refEl.value || '').trim().toUpperCase() : '';
 
   // 確認画面
   var petListHtml = '';
@@ -343,7 +344,8 @@ async function submitRegister() {
   document.getElementById('loading').classList.add('show');
 
   var petData = collectPetData();
-  var referralCode = (document.getElementById('referralInput').value || '').trim().toUpperCase();
+  var refEl = document.getElementById('referralInput');
+  var referralCode = refEl ? (refEl.value || '').trim().toUpperCase() : '';
   var payload = {
     action: 'register',
     lineId: lineId,
@@ -363,7 +365,7 @@ async function submitRegister() {
       body: JSON.stringify(payload)
     }).catch(function(){});
 
-    await new Promise(function(r){ setTimeout(r, 3000); });
+    await new Promise(function(r){ setTimeout(r, 6000); });
 
     var supaUrl = PAWBON_CONFIG.SUPABASE_URL + '/rest/v1/pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1';
     var supaRes = await fetch(supaUrl, {
