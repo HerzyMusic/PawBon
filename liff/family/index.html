@@ -443,13 +443,22 @@ function supaGet(path) {
 
 // ═══ LIFF ═══
 async function initLiff() {
+  // URLパラメータ優先（テスト用: ?lineId=Uxxxxx）
+  var params = new URLSearchParams(window.location.search);
+  var paramId = params.get('lineId') || params.get('lineid');
+  if (paramId) {
+    lineId = paramId;
+    loadFamily();
+    return;
+  }
+
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.family });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     var profile = await liff.getProfile();
     lineId = profile.userId;
   } catch (e) {
-    // LIFF外（LINE内ブラウザ以外）の場合のフォールバック
+    // LIFF外フォールバック（ブラウザテスト用）
     try {
       var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
       if (Array.isArray(latest) && latest.length > 0) lineId = latest[0].owner_line_id;
