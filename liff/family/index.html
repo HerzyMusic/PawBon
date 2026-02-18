@@ -224,7 +224,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.5 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.3.6 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -416,34 +416,58 @@ function renderMemberView() {
   renderCheckins(familyData.recentCheckins, 'memberHistory');
 }
 
-// ═══ LINE シェア（Flex Message） ═══
+// ═══ LINE シェア（Flex Message + 参加リンク付き） ═══
+function getJoinUrl(code) {
+  // LIFF URL with family code parameter
+  var liffId = PAWBON_CONFIG.LIFF_ID.familyJoin;
+  var codeNum = code.replace('P-','');
+  return 'https://liff.line.me/' + liffId + '?code=' + codeNum;
+}
+
+function getAddFriendAndJoinUrl(code) {
+  // LINE友だち追加 → 追加後にLIFFで家族参加
+  var codeNum = code.replace('P-','');
+  var liffId = PAWBON_CONFIG.LIFF_ID.familyJoin;
+  // LINE URL scheme: 友だち追加後にLIFFページへ遷移
+  return PAWBON_CONFIG.LINE_ADD_FRIEND_URL + '#~/' + 'family-join?code=' + codeNum;
+}
+
 function shareLine() {
+  var joinUrl = getJoinUrl(familyData.familyCode);
+  var addFriendUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var codeNum = familyData.familyCode.replace('P-','');
+
   if (typeof liff !== 'undefined' && liff.isApiAvailable('shareTargetPicker')) {
     liff.shareTargetPicker([
       {
         type: 'flex',
-        altText: '🐾 PawBon 家族招待: ' + familyData.familyCode,
+        altText: '🐾 ' + familyData.petNames + 'の家族になりませんか？ 家族コード: ' + familyData.familyCode,
         contents: {
           type: 'bubble',
-          size: 'kilo',
+          size: 'mega',
           header: {
-            type: 'box', layout: 'vertical',
+            type: 'box', layout: 'horizontal',
             backgroundColor: '#FFF0F2',
             paddingAll: '16px',
             contents: [
-              { type: 'box', layout: 'horizontal', contents: [
-                { type: 'text', text: '🐾', size: 'xl', flex: 0 },
-                { type: 'text', text: 'PawBon 元気チェック', size: 'sm', weight: 'bold', color: '#E8475F', gravity: 'center', margin: 'sm' }
-              ]}
+              { type: 'text', text: '🐾', size: 'xl', flex: 0 },
+              { type: 'text', text: 'PawBon 元気チェック', size: 'sm', weight: 'bold', color: '#E8475F', gravity: 'center', margin: 'sm' }
+            ]
+          },
+          hero: {
+            type: 'box', layout: 'vertical',
+            backgroundColor: '#FFFFFF',
+            paddingAll: '20px',
+            contents: [
+              { type: 'text', text: familyData.petNames + 'の', size: 'md', weight: 'bold', align: 'center' },
+              { type: 'text', text: '家族になりませんか？', size: 'lg', weight: 'bold', align: 'center', margin: 'xs' }
             ]
           },
           body: {
             type: 'box', layout: 'vertical',
-            paddingAll: '16px',
+            paddingAll: '20px',
             contents: [
-              { type: 'text', text: familyData.petNames + 'の\n家族になりませんか？', size: 'md', weight: 'bold', wrap: true },
-              { type: 'separator', margin: 'lg' },
-              { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm',
+              { type: 'box', layout: 'vertical',
                 backgroundColor: '#FFF0F2',
                 cornerRadius: '12px',
                 paddingAll: '16px',
@@ -452,18 +476,43 @@ function shareLine() {
                   { type: 'text', text: familyData.familyCode, size: 'xxl', weight: 'bold', color: '#E8475F', align: 'center', margin: 'sm' }
                 ]
               },
-              { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'xs', contents: [
-                { type: 'text', text: '❶ PawBonを友だち追加', size: 'xs', color: '#999999' },
-                { type: 'text', text: '❷ メニューの「家族参加」をタップ', size: 'xs', color: '#999999' },
-                { type: 'text', text: '❸ 上のコードを入力するだけ！', size: 'xs', color: '#999999' }
-              ]}
+              { type: 'separator', margin: 'lg' },
+              { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm', contents: [
+                { type: 'text', text: '📱 参加方法', size: 'sm', weight: 'bold', color: '#1A1A2E' },
+                { type: 'text', text: '❶ 下のボタンからPawBonを友だち追加', size: 'xs', color: '#64748B', margin: 'sm' },
+                { type: 'text', text: '❷ 「家族として参加」ボタンをタップ', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '❸ 家族コードを入力して完了！', size: 'xs', color: '#64748B' }
+              ]},
+              { type: 'text', text: '毎日ペットの元気状況が届きます 💌', size: 'xxs', color: '#AAAAAA', align: 'center', wrap: true, margin: 'lg' }
             ]
           },
           footer: {
             type: 'box', layout: 'vertical',
-            paddingAll: '12px',
+            paddingAll: '16px',
+            spacing: 'sm',
             contents: [
-              { type: 'text', text: '毎日ペットの元気をチェック＆家族に通知 💌', size: 'xxs', color: '#AAAAAA', align: 'center', wrap: true }
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '🐾 PawBonを友だち追加する',
+                  uri: addFriendUrl
+                },
+                style: 'primary',
+                color: '#06C755',
+                height: 'md'
+              },
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '👨‍👩‍👦 家族として参加する',
+                  uri: joinUrl
+                },
+                style: 'primary',
+                color: '#E8475F',
+                height: 'md'
+              }
             ]
           }
         }
@@ -478,28 +527,43 @@ function shareLine() {
   }
 }
 
-// ═══ コピー ═══
+// ═══ コピー（リンク付き） ═══
 function copyCode() {
   var code = familyData.familyCode;
-  var text = '🐾 PawBon 元気チェック\n\n' + familyData.petNames + 'の家族になりませんか？\n\n家族コード: ' + code + '\n\nPawBonを友だち追加して「家族参加」からコードを入力してください！';
+  var addUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var joinUrl = getJoinUrl(code);
+  var text = '🐾 PawBon 元気チェック\n\n' +
+    familyData.petNames + 'の家族になりませんか？\n\n' +
+    '家族コード: ' + code + '\n\n' +
+    '📱 参加方法:\n' +
+    '① まずPawBonを友だち追加 👇\n' + addUrl + '\n\n' +
+    '② 下のリンクから家族参加 👇\n' + joinUrl + '\n\n' +
+    '毎日ペットの元気状況が届きます 💌';
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(function() {
       alert('✅ コピーしました！\n\nLINEのトークに貼り付けて送信してください 🐾');
     });
   } else {
-    var input = document.createElement('textarea');
-    input.value = text;
-    document.body.appendChild(input);
-    input.select();
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
     document.execCommand('copy');
-    document.body.removeChild(input);
+    document.body.removeChild(ta);
     alert('✅ コピーしました！\n\nLINEのトークに貼り付けて送信してください 🐾');
   }
 }
 
 // ═══ その他シェア（Web Share API） ═══
 function shareGeneral() {
-  var text = '🐾 PawBon 元気チェック\n' + familyData.petNames + 'の家族になりませんか？\n家族コード: ' + familyData.familyCode;
+  var code = familyData.familyCode;
+  var addUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var joinUrl = getJoinUrl(code);
+  var text = '🐾 PawBon 元気チェック\n' +
+    familyData.petNames + 'の家族になりませんか？\n\n' +
+    '家族コード: ' + code + '\n\n' +
+    '① 友だち追加: ' + addUrl + '\n' +
+    '② 家族参加: ' + joinUrl;
   if (navigator.share) {
     navigator.share({ title: 'PawBon 家族招待', text: text }).catch(function(){});
   } else {
@@ -514,33 +578,44 @@ function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 function closeModal(e, id) { if (e.target === e.currentTarget) hideModal(id); }
 
 function shareInviteLink() {
-  var inviteText = '🐾 PawBonでペットの元気を毎日チェック！\n\n家族や友だちにペットの元気状況を簡単シェア。\n私の紹介で登録すると、お互い嬉しい特典があります！\n\n👉 PawBonを友だち追加して始めよう！';
+  var addFriendUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
   if (typeof liff !== 'undefined' && liff.isApiAvailable('shareTargetPicker')) {
     liff.shareTargetPicker([
       {
         type: 'flex',
-        altText: '🐾 PawBonを始めよう！',
+        altText: '🐾 PawBonでペットの元気を毎日チェック！友だち追加して始めよう',
         contents: {
-          type: 'bubble', size: 'kilo',
+          type: 'bubble', size: 'mega',
           header: {
-            type: 'box', layout: 'vertical', backgroundColor: '#EDFCF7', paddingAll: '16px',
+            type: 'box', layout: 'horizontal', backgroundColor: '#EDFCF7', paddingAll: '16px',
             contents: [
-              { type: 'text', text: '🎁 PawBon 招待', size: 'sm', weight: 'bold', color: '#1FA882' }
+              { type: 'text', text: '🎁', size: 'xl', flex: 0 },
+              { type: 'text', text: 'PawBon のご招待', size: 'sm', weight: 'bold', color: '#1FA882', gravity: 'center', margin: 'sm' }
             ]
           },
           body: {
-            type: 'box', layout: 'vertical', paddingAll: '16px',
+            type: 'box', layout: 'vertical', paddingAll: '20px',
             contents: [
-              { type: 'text', text: 'ペットの元気を\n毎日チェック！', size: 'md', weight: 'bold', wrap: true },
-              { type: 'text', text: '家族や友だちにペットの元気状況を簡単シェアできるアプリです', size: 'xs', color: '#999999', wrap: true, margin: 'md' },
+              { type: 'text', text: 'ペットの元気を\n毎日チェック！', size: 'lg', weight: 'bold', wrap: true, align: 'center' },
+              { type: 'text', text: '家族や友だちにペットの元気状況を\n簡単にシェアできるサービスです', size: 'xs', color: '#999999', wrap: true, margin: 'md', align: 'center' },
               { type: 'separator', margin: 'lg' },
-              { type: 'text', text: '✅ 完全無料で始められます\n✅ 毎日の元気チェック\n✅ 家族に自動通知', size: 'xs', color: '#64748B', wrap: true, margin: 'lg' }
+              { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm', contents: [
+                { type: 'text', text: '✅ 完全無料で始められます', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '✅ 毎日30秒の元気チェック', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '✅ 家族に自動で通知', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '✅ 離れて暮らす家族も安心', size: 'xs', color: '#64748B' }
+              ]}
             ]
           },
           footer: {
-            type: 'box', layout: 'vertical', paddingAll: '12px',
+            type: 'box', layout: 'vertical', paddingAll: '16px',
             contents: [
-              { type: 'text', text: '友だち追加して始めよう 🐾', size: 'xs', color: '#AAAAAA', align: 'center' }
+              {
+                type: 'button',
+                action: { type: 'uri', label: '🐾 PawBonを友だち追加する', uri: addFriendUrl },
+                style: 'primary', color: '#06C755', height: 'md'
+              },
+              { type: 'text', text: '友だち追加後、ペット登録をするだけ！', size: 'xxs', color: '#AAAAAA', align: 'center', margin: 'sm' }
             ]
           }
         }
@@ -557,7 +632,11 @@ function shareInviteLink() {
 }
 
 function copyInviteLink() {
-  var text = '🐾 PawBonでペットの元気を毎日チェック！\n家族や友だちにペットの元気状況を簡単シェア。\n\n👉 PawBonを友だち追加して始めよう！';
+  var addUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var text = '🐾 PawBonでペットの元気を毎日チェック！\n\n' +
+    '家族や友だちにペットの元気状況を簡単シェア。\n' +
+    '私の紹介で登録すると、お互い嬉しい特典があります！\n\n' +
+    '👉 下のリンクから友だち追加して始めよう！\n' + addUrl;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(function() {
       alert('✅ 招待メッセージをコピーしました！\n\nLINEのトークに貼り付けて送信してください');
