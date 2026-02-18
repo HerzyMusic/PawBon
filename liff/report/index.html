@@ -103,7 +103,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.4 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.4.3 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -138,6 +138,11 @@ async function initLiff() {
 }
 initLiff();
 
+// ═══ Helper: レコードから日付を取得 ═══
+function getDate(r) {
+  return r.checkin_date || r.check_date || r.date || '';
+}
+
 // ═══ Load ═══
 async function loadReport() {
   try {
@@ -163,12 +168,39 @@ async function loadReport() {
 
     familyCode = family.family_code;
 
-    // 2. 全チェックイン記録を取得
-    var rawRecords = await supaGet(
-      'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
-      '&order=checkin_date.desc&limit=365'
-    );
+    // 2. 全チェックイン記録を取得（order フォールバック付き）
+    var rawRecords;
+    try {
+      rawRecords = await supaGet(
+        'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+        '&order=checkin_date.desc&limit=365'
+      );
+    } catch(e1) { rawRecords = null; }
+
+    if (!Array.isArray(rawRecords)) {
+      try {
+        rawRecords = await supaGet(
+          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+          '&order=check_date.desc&limit=365'
+        );
+      } catch(e2) { rawRecords = null; }
+    }
+
+    if (!Array.isArray(rawRecords)) {
+      try {
+        rawRecords = await supaGet(
+          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+          '&order=id.desc&limit=365'
+        );
+      } catch(e3) { rawRecords = []; }
+    }
+
     allRecords = Array.isArray(rawRecords) ? rawRecords : [];
+
+    // JS側で日付降順ソート
+    allRecords.sort(function(a, b) {
+      return getDate(b).localeCompare(getDate(a));
+    });
 
     // 3. 同地域の今日の元気数（概算）
     var today = new Date().toISOString().substring(0, 10);
@@ -178,7 +210,14 @@ async function loadReport() {
         'checkins?checkin_date=eq.' + today + '&status=eq.genki&limit=100'
       );
       regionCheckins = Array.isArray(rawRegion) ? rawRegion : [];
-    } catch(e3) {}
+    } catch(e3) {
+      try {
+        var rawRegion2 = await supaGet(
+          'checkins?check_date=eq.' + today + '&status=eq.genki&limit=100'
+        );
+        regionCheckins = Array.isArray(rawRegion2) ? rawRegion2 : [];
+      } catch(e4) {}
+    }
 
     // 4. 統計計算
     var totalDays = allRecords.length;
@@ -224,15 +263,12 @@ async function loadReport() {
 function calcStreak(records) {
   if (!records || records.length === 0) return 0;
 
-  // 日付でソート（新しい順）
-  var dates = records.map(function(r){ return r.checkin_date; }).sort().reverse();
+  var dates = records.map(function(r){ return getDate(r); }).filter(Boolean).sort().reverse();
 
-  // 今日 or 昨日から連続しているか
   var today = new Date();
   var streak = 0;
   var checkDate = new Date(today);
 
-  // 今日の記録がなければ昨日から
   var todayStr = formatDate(today);
   if (dates.indexOf(todayStr) === -1) {
     checkDate.setDate(checkDate.getDate() - 1);
@@ -275,7 +311,7 @@ function renderCalendar() {
   // 記録をdateでマッピング
   var dateMap = {};
   allRecords.forEach(function(r) {
-    dateMap[r.checkin_date] = r.status;
+    dateMap[getDate(r)] = r.status;
   });
 
   var html = '';
@@ -316,8 +352,9 @@ function renderHistory() {
 
   var weekdays = ['日','月','火','水','木','金','土'];
   container.innerHTML = allRecords.slice(0, 14).map(function(r) {
-    var d = new Date(r.checkin_date);
-    var label = (d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）';
+    var dateStr = getDate(r);
+    var d = new Date(dateStr);
+    var label = isNaN(d.getTime()) ? dateStr : ((d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）');
     if (r.status === 'genki') {
       return '<div class="record-row"><span class="date">' + label + '</span><span class="status-g">✅ 全員元気</span></div>';
     } else {
