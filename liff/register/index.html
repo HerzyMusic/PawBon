@@ -99,6 +99,12 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
       </select>
     </div>
 
+    <div style="margin-top:8px;padding-top:16px;border-top:1px solid var(--s200);">
+      <label class="form-label">🎁 紹介コード（任意）</label>
+      <input class="form-input" id="referralInput" placeholder="例：R-A3K7M2" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace;font-size:16px;">
+      <div class="hint-text">💡 友だちからコードをもらった方はここに入力してください</div>
+    </div>
+
     <button class="btn btn-primary" onclick="goStep3()">次へ →</button>
     <button class="btn btn-outline" onclick="show('step1');hide('step2')">← 戻る</button>
   </div>
@@ -138,11 +144,18 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
       <div class="hint">このコードを家族にシェアしてください</div>
     </div>
     <div class="info">💡 家族がこのコードを入力すると<br>毎日の元気通知が届きます！</div>
+    <div id="referralCodeArea" style="display:none;margin-top:12px;">
+      <div style="background:var(--teal-l);border:1.5px dashed var(--teal);border-radius:16px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--teal-d);font-weight:700;">🎁 あなたの紹介コード</div>
+        <div id="referralCodeDisplay" style="font-family:monospace;font-size:22px;font-weight:700;color:var(--teal-d);letter-spacing:4px;margin:6px 0;"></div>
+        <div style="font-size:10px;color:var(--s400);">友だちに共有すると家族メンバー枠が+1！</div>
+      </div>
+    </div>
     <button class="btn btn-primary" style="margin-top:16px;" onclick="closeLiff()">🐾 さっそくチェック！</button>
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.1 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -305,6 +318,7 @@ function goStep3() {
   var ownerName = document.getElementById('ownerName').value.trim();
   var petData = collectPetData();
   var detail = document.getElementById('areaDetail').value || '';
+  var referralCode = (document.getElementById('referralInput').value || '').trim().toUpperCase();
 
   // 確認画面
   var petListHtml = '';
@@ -317,7 +331,8 @@ function goStep3() {
     '<div class="data-row"><span class="label">👤 お名前</span><span class="value">' + escapeHtml(ownerName) + '</span></div>' +
     '<div class="data-row"><span class="label">🔢 頭数</span><span class="value">' + petCount + '匹</span></div>' +
     petListHtml +
-    '<div class="data-row"><span class="label">📍 地域</span><span class="value">' + escapeHtml(area + ' ' + detail) + '</span></div>';
+    '<div class="data-row"><span class="label">📍 地域</span><span class="value">' + escapeHtml(area + ' ' + detail) + '</span></div>' +
+    (referralCode ? '<div class="data-row"><span class="label">🎁 紹介コード</span><span class="value" style="color:var(--teal-d);">' + escapeHtml(referralCode) + '</span></div>' : '');
 
   hide('step2'); show('step3');
 }
@@ -328,6 +343,7 @@ async function submitRegister() {
   document.getElementById('loading').classList.add('show');
 
   var petData = collectPetData();
+  var referralCode = (document.getElementById('referralInput').value || '').trim().toUpperCase();
   var payload = {
     action: 'register',
     lineId: lineId,
@@ -336,7 +352,8 @@ async function submitRegister() {
     breeds: petData.breeds.join(', '),
     petCount: petCount,
     area: document.getElementById('area').value,
-    areaDetail: document.getElementById('areaDetail').value || ''
+    areaDetail: document.getElementById('areaDetail').value || '',
+    referralCode: referralCode || ''
   };
 
   try {
@@ -362,6 +379,12 @@ async function submitRegister() {
     if (families && families.length > 0) {
       document.getElementById('familyCodeDisplay').textContent = families[0].family_code;
       document.getElementById('doneMsg').textContent = petData.names.join('、') + 'の情報を保存しました';
+      // 紹介コード表示
+      var refCode = families[0].referral_code || '';
+      if (refCode) {
+        document.getElementById('referralCodeArea').style.display = 'block';
+        document.getElementById('referralCodeDisplay').textContent = refCode;
+      }
       show('step4');
     } else {
       alert('登録処理に時間がかかっています。少し待ってからもう一度お試しください。');
