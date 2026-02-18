@@ -436,7 +436,7 @@ var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
 var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
 var lineId = '';
 var familyData = null;
-var FREE_SLOTS = 2;
+var FREE_SLOTS = 2; // デフォルト値。DB読み込み後に上書き
 var bonusSlots = 0;
 var paidSlots = 0;
 var selectedPayQty = 1;
@@ -531,6 +531,7 @@ async function loadFamily() {
     // ボーナス枠: invited_by を持つ pet_families の数（この人が招待した新規オーナー数）
     bonusSlots = family.bonus_slots || 0;
     paidSlots = family.paid_slots || 0;
+    FREE_SLOTS = family.max_members || 2; // 後台で設定した基本枠を反映
 
     familyData = {
       role: role,
@@ -638,7 +639,7 @@ function renderOwnerView() {
   // 名額情報
   var quotaInfo = document.getElementById('quotaInfo');
   var parts = [];
-  parts.push('無料枠 ' + FREE_SLOTS);
+  parts.push('基本枠 ' + FREE_SLOTS);
   if (bonusSlots > 0) parts.push('招待ボーナス +' + bonusSlots);
   if (paidSlots > 0) parts.push('購入枠 +' + paidSlots);
   var remaining = totalSlots - usedSlots;
