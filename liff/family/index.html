@@ -421,7 +421,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.4.2 Beta<br>© 2026 PawBon Inc.</div>
+<div class="footer">PawBon 元気チェック v0.4.3 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -511,7 +511,15 @@ async function loadFamily() {
     var rawMembers = await supaGet('family_members?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=registered_at.asc');
     var allMembers = Array.isArray(rawMembers) ? rawMembers : [];
 
-    var rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=checkin_date.desc&limit=7');
+    var rawCheckins;
+    try {
+      rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=checkin_date.desc&limit=7');
+    } catch(ec) { rawCheckins = null; }
+    if (!Array.isArray(rawCheckins)) {
+      try {
+        rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=id.desc&limit=7');
+      } catch(ec2) { rawCheckins = []; }
+    }
     var recentCheckins = Array.isArray(rawCheckins) ? rawCheckins : [];
 
     // ボーナス枠: invited_by を持つ pet_families の数（この人が招待した新規オーナー数）
@@ -590,8 +598,9 @@ function renderCheckins(checkins, containerId) {
   }
   var weekdays = ['日','月','火','水','木','金','土'];
   container.innerHTML = checkins.map(function(r) {
-    var d = new Date(r.checkin_date);
-    var label = (d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）';
+    var dateStr = r.checkin_date || r.check_date || r.date || '';
+    var d = new Date(dateStr);
+    var label = isNaN(d.getTime()) ? dateStr : ((d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）');
     if (r.status === 'genki') {
       return '<div class="record-row"><span>' + label + '</span><span class="g">✅ 全員元気</span></div>';
     } else {
