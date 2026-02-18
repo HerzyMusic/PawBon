@@ -80,6 +80,33 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .modal .desc{font-size:12px;color:var(--s500);text-align:center;line-height:1.6;margin-bottom:20px;}
 .modal .btn{margin-bottom:8px;}
 .invite-steps{padding:12px;background:var(--s100);border-radius:12px;margin-bottom:16px;font-size:11px;line-height:2;color:var(--s500);}
+
+/* ═══ Help Link ═══ */
+.help-link{display:block;width:100%;background:transparent;border:none;color:var(--teal-d);font-size:12px;font-weight:600;text-align:center;padding:12px 0 0;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;}
+
+/* ═══ Guide Steps ═══ */
+.guide-step{background:var(--s100);border-radius:16px;padding:16px;margin-bottom:14px;}
+.guide-step-num{display:inline-block;background:var(--teal);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:1px;margin-bottom:8px;}
+.guide-step-title{font-size:14px;font-weight:800;margin-bottom:12px;}
+.guide-step-body{display:flex;gap:14px;align-items:flex-start;}
+.guide-illust{flex-shrink:0;width:120px;}
+.guide-text{flex:1;font-size:12px;line-height:1.7;color:var(--s500);}
+.guide-text strong{color:var(--ink);}
+
+/* Phone Mock */
+.phone-mock{background:var(--card);border-radius:14px;border:2px solid var(--s200);overflow:hidden;position:relative;}
+.phone-notch{width:40px;height:4px;border-radius:2px;background:var(--s200);margin:6px auto 4px;}
+.chat-bubble{margin:4px 8px;padding:8px 10px;border-radius:10px;font-size:10px;line-height:1.4;max-width:90%;}
+.chat-bubble.me{background:#DCF8C6;margin-left:auto;border-bottom-right-radius:2px;}
+.chat-bubble.other{background:#fff;border:1px solid var(--s200);border-bottom-left-radius:2px;}
+
+/* Trouble Section */
+.guide-trouble{background:var(--amber-l);border:1px solid var(--amber);border-radius:14px;padding:16px;margin-top:16px;}
+.trouble-item{margin-bottom:12px;}
+.trouble-item:last-child{margin-bottom:0;}
+.trouble-q{font-size:12px;font-weight:800;color:var(--orange);margin-bottom:4px;}
+.trouble-a{font-size:11px;color:var(--s500);line-height:1.6;}
+.trouble-a strong{color:var(--ink);}
 </style>
 </head>
 <body>
@@ -108,6 +135,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
       <button class="btn btn-outline" onclick="copyCode()">📋 コードをコピー</button>
       <button class="btn btn-outline" onclick="shareGeneral()">📤 その他でシェア</button>
     </div>
+    <button class="help-link" onclick="showHelpGuide()">❓ 家族にうまく伝えられない？→ かんたんガイドを見る</button>
   </div>
 
   <!-- 名額バー -->
@@ -224,7 +252,142 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<div class="footer">PawBon 元気チェック v0.3.6 Beta<br>© 2026 PawBon Inc.</div>
+<!-- ═══ 家族招待ヘルプガイド ═══ -->
+<div class="modal-overlay" id="helpGuide" onclick="closeModal(event,'helpGuide')">
+  <div class="modal" style="max-height:90vh;overflow-y:auto;border-radius:20px 20px 0 0;">
+    <div class="modal-handle"></div>
+
+    <!-- タイトル -->
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:48px;margin-bottom:8px;">📖</div>
+      <h3 style="font-size:18px;margin-bottom:4px;">家族の招待かんたんガイド</h3>
+      <p class="desc" style="margin-bottom:0;">おじいちゃん・おばあちゃんでも<br>かんたんに参加できます！</p>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 1</div>
+      <div class="guide-step-title">📤 招待メッセージを送る</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div class="chat-bubble me">チョコの元気チェック、一緒に見れるようにしたよ！</div>
+            <div class="chat-bubble me">
+              <div style="background:var(--rose-l);border-radius:8px;padding:8px;font-size:11px;text-align:center;">
+                🐾 PawBon 元気チェック<br>
+                <strong style="color:var(--rose);font-size:14px;">P-8472</strong><br>
+                <span style="font-size:10px;color:var(--s400);">[🐾 友だち追加] [👨‍👩‍👦 参加]</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          上の <strong>「LINEで家族を招待する」</strong> ボタンを押して、家族のLINEトークに招待カードを送りましょう。<br><br>
+          💡 <strong>ポイント：</strong>一言メッセージも添えると伝わりやすいです！
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 2</div>
+      <div class="guide-step-title">➕ PawBonを友だち追加してもらう</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div style="text-align:center;padding:12px 8px;">
+              <div style="width:48px;height:48px;border-radius:50%;background:var(--rose-l);margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:24px;">🐾</div>
+              <div style="font-size:12px;font-weight:700;">PawBon 元気チェック</div>
+              <div style="font-size:10px;color:var(--s400);margin-top:2px;">公式アカウント</div>
+              <div style="background:#06C755;color:#fff;border-radius:20px;padding:6px 16px;font-size:11px;font-weight:700;margin-top:8px;display:inline-block;">＋ 追加</div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          招待カードの <strong style="color:#06C755;">「🐾 友だち追加する」</strong> ボタンをタップしてもらいます。<br><br>
+          まだPawBonを使ったことがない方は、まずこの友だち追加が必要です。
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 3</div>
+      <div class="guide-step-title">👨‍👩‍👦 「家族として参加する」をタップ</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div style="text-align:center;padding:12px 8px;">
+              <div style="font-size:10px;color:var(--s400);margin-bottom:4px;">招待カードの</div>
+              <div style="background:var(--rose);color:#fff;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;display:inline-block;">👨‍👩‍👦 家族として参加する</div>
+              <div style="margin-top:10px;font-size:10px;color:var(--s400);">または</div>
+              <div style="margin-top:6px;font-size:10px;color:var(--s500);">LINEメニューの<br>「👨‍👩‍👦 家族参加」をタップ</div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          招待カード下の赤いボタンをタップすると、家族参加ページが開きます。<br><br>
+          💡 招待カードのボタンをタップすると<strong>コードが自動入力</strong>されるので簡単です！
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 4</div>
+      <div class="guide-step-title">🔑 コード入力 → 続柄選択 → 完了！</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div style="padding:8px;">
+              <div style="text-align:center;margin-bottom:6px;">
+                <span style="font-size:10px;color:var(--s400);">家族コード</span><br>
+                <span style="font-family:monospace;font-size:18px;font-weight:700;color:var(--rose);letter-spacing:3px;">P-8472</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                <div style="text-align:center;padding:6px;border-radius:6px;background:var(--teal-l);border:1px solid var(--teal);font-size:9px;">👵 おばあちゃん</div>
+                <div style="text-align:center;padding:6px;border-radius:6px;border:1px solid var(--s200);font-size:9px;">👨 パパ</div>
+              </div>
+              <div style="text-align:center;margin-top:6px;font-size:20px;">🎉</div>
+              <div style="text-align:center;font-size:10px;font-weight:700;color:var(--teal-d);">登録完了！</div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          コードを入力（自動入力済み）→ 続柄を選んでタップ → <strong>完了</strong>！<br><br>
+          🎉 これだけで明日から毎日、ペットの元気レポートが届きます。
+        </div>
+      </div>
+    </div>
+
+    <!-- 困ったら -->
+    <div class="guide-trouble">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px;">😣 うまくいかない時は</div>
+      <div class="trouble-item">
+        <div class="trouble-q">Q. 「友だち追加」ボタンが出ない</div>
+        <div class="trouble-a">A. LINEアプリが最新版か確認してください。それでもダメな場合は、LINEの「友だち追加」→「ID検索」から <strong id="helpBotId">@pawbon</strong> を検索してください。</div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-q">Q. コードを手入力したい</div>
+        <div class="trouble-a">A. PawBonのLINEトーク画面下のメニューから「👨‍👩‍👦 家族参加」を選び、コード <strong id="helpCode">P-0000</strong> を手入力してください。</div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-q">Q. スマホが苦手な家族に教えたい</div>
+        <div class="trouble-a">A. 電話しながら一緒にやるのがおすすめです！「LINEでメッセージ送ったから、そこに緑のボタンがあるからタップして」と伝えてあげてください。</div>
+      </div>
+    </div>
+
+    <!-- 閉じるボタン -->
+    <button class="btn btn-teal" style="margin-top:16px;" onclick="hideModal('helpGuide')">👍 わかりました！</button>
+    <button class="btn" style="background:transparent;color:var(--s400);font-size:13px;margin-top:4px;" onclick="hideModal('helpGuide')">閉じる</button>
+  </div>
+</div>
+
+<div class="footer">PawBon 元気チェック v0.3.7 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
@@ -574,6 +737,16 @@ function shareGeneral() {
 // ═══ 招待モーダル ═══
 function showInviteModal() { document.getElementById('inviteModal').classList.add('show'); }
 function showPayModal() { document.getElementById('payModal').classList.add('show'); }
+function showHelpGuide() {
+  // 動的にコードとBOT IDを埋め込む
+  if (familyData) {
+    var codeEl = document.getElementById('helpCode');
+    if (codeEl) codeEl.textContent = familyData.familyCode;
+  }
+  var botEl = document.getElementById('helpBotId');
+  if (botEl && PAWBON_CONFIG.LINE_BOT_ID) botEl.textContent = PAWBON_CONFIG.LINE_BOT_ID;
+  document.getElementById('helpGuide').classList.add('show');
+}
 function hideModal(id) { document.getElementById(id).classList.remove('show'); }
 function closeModal(e, id) { if (e.target === e.currentTarget) hideModal(id); }
 
