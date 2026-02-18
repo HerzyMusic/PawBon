@@ -33,8 +33,8 @@ const PAWBON_CONFIG = {
     // ─────────────────────────────
   // ④ LINE 公式アカウント
   // ─────────────────────────────
-  LINE_BOT_ID: '@689imzld',   // 例: @123abcde
-  LINE_ADD_FRIEND_URL: 'https://line.me/R/ti/p/@689imzld',
+  LINE_BOT_ID: '@pawbon',   // 例: @123abcde
+  LINE_ADD_FRIEND_URL: 'https://line.me/R/ti/p/@pawbon',
 
   // ─────────────────────────────
   // ⑤ LIFF ページのベースURL（GitHub Pages）
