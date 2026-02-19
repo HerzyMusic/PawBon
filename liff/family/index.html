@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — 家族管理</title>
+<style>
+:root{--rose:#E8475F;--rose-l:#FFF0F2;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--orange-l:#FFF4F0;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:20px;}
+.header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
+.section{padding:16px;}
+.section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
+.code-box{background:linear-gradient(135deg,var(--rose-l),var(--orange-l));border:1.5px dashed var(--rose);border-radius:16px;padding:20px;text-align:center;margin-bottom:16px;}
+.code-box .label{font-size:11px;color:var(--rose);font-weight:700;}
+.code-box .code{font-family:monospace;font-size:28px;font-weight:700;color:var(--rose);letter-spacing:6px;margin:8px 0;}
+.code-box .hint{font-size:11px;color:var(--s400);}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.btn{display:block;width:100%;padding:12px;border-radius:14px;font-size:14px;font-weight:800;text-align:center;cursor:pointer;border:none;font-family:inherit;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--rose),var(--orange));color:#fff;}
+.btn-teal{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;}
+.btn-outline{background:var(--card);color:var(--s500);border:1.5px solid var(--s200);}
+.btn-line{background:#06C755;color:#fff;font-size:15px;}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.member-card{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:14px;border:1px solid var(--s200);margin-bottom:8px;}
+.member-av{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--rose-l);}
+.member-info{flex:1;}
+.member-info .name{font-size:14px;font-weight:700;}
+.member-info .detail{font-size:10px;color:var(--s400);}
+.member-status{font-size:10px;padding:4px 8px;border-radius:20px;font-weight:700;background:var(--teal-l);color:var(--teal-d);}
+
+/* Delete button on member card */
+.member-delete{width:28px;height:28px;border-radius:50%;border:1.5px solid var(--s200);background:var(--card);display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;flex-shrink:0;transition:all .15s;}
+.member-delete:hover{border-color:var(--rose);background:var(--rose-l);color:var(--rose);}
+.member-delete:active{transform:scale(.9);}
+
+/* Owner card in member view */
+.owner-card{display:flex;align-items:center;gap:12px;padding:14px;background:var(--amber-l);border-radius:14px;border:1.5px solid var(--amber);}
+.owner-card .av{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--card);border:2px solid var(--amber);flex-shrink:0;}
+.owner-card .info-col{flex:1;}
+.owner-card .info-col .name{font-size:14px;font-weight:800;}
+.owner-card .info-col .sub{font-size:11px;color:var(--s500);margin-top:2px;}
+.owner-card .badge-owner{font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;background:var(--amber);color:#fff;flex-shrink:0;}
+
+/* My info card */
+.my-info-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;}
+.my-info-row .label{color:var(--s400);}
+.my-info-row .val{font-weight:700;}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.info{padding:12px;border-radius:12px;font-size:12px;text-align:center;margin-bottom:12px;}
+.info.amber{background:var(--amber-l);color:var(--orange);border:1px solid var(--amber);}
+.info.teal{background:var(--teal-l);color:var(--teal-d);border:1px solid var(--teal);}
+.info.rose{background:var(--rose-l);color:var(--rose);border:1px solid rgba(232,71,95,.2);}
+.record-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--s100);font-size:12px;}
+.record-row:last-child{border:none;}
+.record-row .g{color:var(--teal-d);font-weight:700;}
+.record-row .w{color:#92400E;font-weight:700;}
+.loading{text-align:center;padding:60px 20px;color:var(--s400);}
+.empty{text-align:center;padding:40px 20px;color:var(--s400);}
+.empty .icon{font-size:48px;margin-bottom:12px;}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
+
+/* ═══ 名額 Quota ═══ */
+.quota-bar{margin-bottom:16px;}
+.quota-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.quota-header .label{font-size:12px;font-weight:700;color:var(--s500);}
+.quota-header .count{font-size:12px;font-weight:800;}
+.quota-track{height:8px;border-radius:4px;background:var(--s200);overflow:hidden;}
+.quota-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--teal-d));transition:width .3s;}
+.quota-fill.full{background:linear-gradient(90deg,var(--amber),var(--orange));}
+
+/* ═══ 枠追加カード ═══ */
+.upgrade-card{background:var(--card);border-radius:16px;border:1.5px solid var(--s200);overflow:hidden;margin-bottom:12px;}
+.upgrade-header{padding:14px 16px 10px;font-size:13px;font-weight:800;color:var(--ink);}
+.upgrade-option{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--s100);cursor:pointer;transition:background .15s;}
+.upgrade-option:active{background:var(--s100);}
+.upgrade-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.upgrade-icon.invite{background:var(--teal-l);}
+.upgrade-icon.pay{background:var(--amber-l);}
+.upgrade-body{flex:1;}
+.upgrade-body .title{font-size:13px;font-weight:700;}
+.upgrade-body .desc{font-size:10px;color:var(--s400);margin-top:2px;line-height:1.4;}
+.upgrade-arrow{color:var(--s400);font-size:14px;}
+.upgrade-badge{display:inline-block;font-size:9px;font-weight:800;padding:2px 6px;border-radius:4px;margin-left:4px;}
+.badge-free{background:var(--teal-l);color:var(--teal-d);}
+.badge-pro{background:var(--amber-l);color:var(--orange);}
+
+/* ═══ 招待モーダル ═══ */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;align-items:flex-end;justify-content:center;}
+.modal-overlay.show{display:flex;}
+.modal{background:var(--card);border-radius:20px 20px 0 0;width:100%;max-width:480px;padding:24px 16px 32px;animation:slideUp .3s ease;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-handle{width:40px;height:4px;border-radius:2px;background:var(--s200);margin:0 auto 16px;}
+.modal h3{font-size:16px;font-weight:800;text-align:center;margin-bottom:16px;}
+.modal .desc{font-size:12px;color:var(--s500);text-align:center;line-height:1.6;margin-bottom:20px;}
+.modal .btn{margin-bottom:8px;}
+.invite-steps{padding:12px;background:var(--s100);border-radius:12px;margin-bottom:16px;font-size:11px;line-height:2;color:var(--s500);}
+
+/* ═══ Help Link ═══ */
+.help-link{display:block;width:100%;background:transparent;border:none;color:var(--teal-d);font-size:12px;font-weight:600;text-align:center;padding:12px 0 0;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;}
+
+/* ═══ Guide Steps ═══ */
+.guide-step{background:var(--s100);border-radius:16px;padding:16px;margin-bottom:14px;}
+.guide-step-num{display:inline-block;background:var(--teal);color:#fff;font-size:10px;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:1px;margin-bottom:8px;}
+.guide-step-title{font-size:14px;font-weight:800;margin-bottom:12px;}
+.guide-step-body{display:flex;gap:14px;align-items:flex-start;}
+.guide-illust{flex-shrink:0;width:120px;}
+.guide-text{flex:1;font-size:12px;line-height:1.7;color:var(--s500);}
+.guide-text strong{color:var(--ink);}
+
+/* Phone Mock */
+.phone-mock{background:var(--card);border-radius:14px;border:2px solid var(--s200);overflow:hidden;position:relative;}
+.phone-notch{width:40px;height:4px;border-radius:2px;background:var(--s200);margin:6px auto 4px;}
+.chat-bubble{margin:4px 8px;padding:8px 10px;border-radius:10px;font-size:10px;line-height:1.4;max-width:90%;}
+.chat-bubble.me{background:#DCF8C6;margin-left:auto;border-bottom-right-radius:2px;}
+.chat-bubble.other{background:#fff;border:1px solid var(--s200);border-bottom-left-radius:2px;}
+
+/* Trouble Section */
+.guide-trouble{background:var(--amber-l);border:1px solid var(--amber);border-radius:14px;padding:16px;margin-top:16px;}
+.trouble-item{margin-bottom:12px;}
+.trouble-item:last-child{margin-bottom:0;}
+.trouble-q{font-size:12px;font-weight:800;color:var(--orange);margin-bottom:4px;}
+.trouble-a{font-size:11px;color:var(--s500);line-height:1.6;}
+.trouble-a strong{color:var(--ink);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>👨‍👩‍👦 家族</h1>
+  <p id="headerSub">読み込み中...</p>
+</div>
+
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">👨‍👩‍👦</div>
+  <div>読み込み中...</div>
+</div>
+
+<!-- ═══ オーナービュー ═══ -->
+<div id="ownerView" style="display:none;">
+  <!-- 家族コード + シェア -->
+  <div class="section">
+    <div class="code-box">
+      <div class="label">あなたの家族コード</div>
+      <div class="code" id="ownerCode">-</div>
+      <div class="hint">このコードを家族にシェアしてください</div>
+    </div>
+    <button class="btn btn-line" onclick="shareLine()" style="margin-bottom:8px;">📤 LINEで家族を招待する</button>
+    <div class="btn-row">
+      <button class="btn btn-outline" onclick="copyCode()">📋 コードをコピー</button>
+      <button class="btn btn-outline" onclick="shareGeneral()">📤 その他でシェア</button>
+    </div>
+    <button class="help-link" onclick="showHelpGuide()">❓ 家族にうまく伝えられない？→ かんたんガイドを見る</button>
+  </div>
+
+  <!-- 名額バー -->
+  <div class="section" style="padding-top:0;">
+    <div class="quota-bar">
+      <div class="quota-header">
+        <span class="label">👨‍👩‍👦 家族メンバー枠</span>
+        <span class="count" id="quotaCount">0 / 2</span>
+      </div>
+      <div class="quota-track"><div class="quota-fill" id="quotaFill" style="width:0%"></div></div>
+    </div>
+    <div id="quotaInfo"></div>
+  </div>
+
+  <!-- メンバー一覧 -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">👨‍👩‍👦 登録済み家族</div>
+    <div id="memberList">
+      <div class="empty"><div class="icon">👋</div>まだ家族が登録されていません<br><br>家族コードを共有して<br>招待しましょう！</div>
+    </div>
+  </div>
+
+  <!-- 枠追加カード -->
+  <div class="section" style="padding-top:0;" id="upgradeSection">
+    <div class="upgrade-card">
+      <div class="upgrade-header">🔓 家族メンバー枠を増やす</div>
+      <div class="upgrade-option" onclick="showInviteModal()">
+        <div class="upgrade-icon invite">🎁</div>
+        <div class="upgrade-body">
+          <div class="title">友だちを招待する <span class="upgrade-badge badge-free">無料</span></div>
+          <div class="desc">ペット飼い主の友だちがPawBonに登録すると<br>あなたの家族メンバー枠が+1されます</div>
+        </div>
+        <div class="upgrade-arrow">›</div>
+      </div>
+      <div class="upgrade-option" onclick="showPayModal()">
+        <div class="upgrade-icon pay">💎</div>
+        <div class="upgrade-body">
+          <div class="title">追加枠を購入 <span class="upgrade-badge badge-pro">PRO</span></div>
+          <div class="desc">月額¥100/枠でメンバーを追加できます</div>
+        </div>
+        <div class="upgrade-arrow">›</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- チェック履歴 -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">📋 最近の元気チェック</div>
+    <div class="card" id="ownerHistory" style="padding:0 16px;">
+      <div style="padding:16px 0;text-align:center;color:var(--s400);font-size:12px;">まだチェック記録がありません</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ メンバービュー ═══ -->
+<div id="memberView" style="display:none;">
+  <!-- ペット情報 -->
+  <div class="section">
+    <div class="card" style="text-align:center;background:var(--teal-l);border:1.5px solid var(--teal);">
+      <div style="font-size:28px;">🐕</div>
+      <div style="font-size:16px;font-weight:800;margin-top:6px;" id="memberPets">-</div>
+      <div style="font-size:11px;color:var(--s400);margin-top:2px;" id="memberArea">-</div>
+    </div>
+  </div>
+
+  <!-- 管理者（オーナー）情報 -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">🏠 管理者（飼い主さん）</div>
+    <div id="memberOwnerCard"></div>
+  </div>
+
+  <!-- 他の家族メンバー -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title" id="memberOthersTitle">👨‍👩‍👦 他の家族メンバー</div>
+    <div id="memberFamilyList"></div>
+  </div>
+
+  <!-- あなたの情報 -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">📋 あなたの登録情報</div>
+    <div class="card" id="memberMyInfo" style="padding:14px 16px;"></div>
+  </div>
+
+  <!-- チェック履歴 -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">📋 最近の元気チェック</div>
+    <div class="card" id="memberHistory" style="padding:0 16px;">
+      <div style="padding:16px 0;text-align:center;color:var(--s400);font-size:12px;">まだチェック記録がありません</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ 招待モーダル ═══ -->
+<div class="modal-overlay" id="inviteModal" onclick="closeModal(event,'inviteModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>🎁 友だち招待で枠を増やす</h3>
+    <div style="background:var(--teal-l);border:1.5px dashed var(--teal);border-radius:16px;padding:16px;text-align:center;margin-bottom:16px;">
+      <div style="font-size:11px;color:var(--teal-d);font-weight:700;">あなたの紹介コード</div>
+      <div id="referralCodeBox" style="font-family:monospace;font-size:26px;font-weight:700;color:var(--teal-d);letter-spacing:5px;margin:8px 0;">-</div>
+      <button onclick="copyReferralCode()" style="background:var(--teal);color:#fff;border:none;border-radius:8px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer;">📋 コードをコピー</button>
+    </div>
+    <div id="referralStats" style="text-align:center;font-size:12px;color:var(--s500);margin-bottom:12px;"></div>
+    <div class="desc">ペット飼い主の友だちにPawBonを紹介しましょう！<br>友だちが登録時にこのコードを入力すると<br>あなたの家族メンバー枠が<strong>+1</strong>されます。</div>
+    <div class="invite-steps">
+      <strong>📋 手順</strong><br>
+      ① 下のボタンで紹介コードをシェア<br>
+      ② 友だちがPawBonを友だち追加<br>
+      ③ 友だちがペット登録時にコードを入力<br>
+      ④ あなたの家族枠が自動で+1 🎉
+    </div>
+    <button class="btn btn-line" onclick="shareReferralLine()">📤 LINEで紹介する</button>
+    <button class="btn btn-outline" onclick="copyReferralMessage()">📋 紹介メッセージをコピー</button>
+    <button class="btn" style="background:transparent;color:var(--s400);font-size:13px;" onclick="hideModal('inviteModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- ═══ 購入モーダル ═══ -->
+<div class="modal-overlay" id="payModal" onclick="closeModal(event,'payModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>💎 追加メンバー枠の購入</h3>
+    <div class="desc">月額プランで家族メンバー枠を追加できます。</div>
+    <div class="card" style="text-align:center;border:1.5px solid var(--amber);background:var(--amber-l);">
+      <div style="font-size:11px;color:var(--s500);margin-bottom:4px;">追加メンバー枠</div>
+      <div style="font-size:32px;font-weight:900;color:var(--orange);">¥100<span style="font-size:14px;font-weight:700;color:var(--s500);">/月・枠</span></div>
+      <div style="font-size:11px;color:var(--s400);margin-top:4px;">いつでもキャンセル可能</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button class="btn btn-outline pay-qty" onclick="selectQty(this,1)" style="flex:1;border-color:var(--amber);background:var(--amber-l);color:var(--orange);">+1枠<br><span style="font-size:10px;">¥100/月</span></button>
+      <button class="btn btn-outline pay-qty" onclick="selectQty(this,2)" style="flex:1;">+2枠<br><span style="font-size:10px;">¥200/月</span></button>
+      <button class="btn btn-outline pay-qty" onclick="selectQty(this,3)" style="flex:1;">+3枠<br><span style="font-size:10px;">¥300/月</span></button>
+    </div>
+    <button class="btn btn-primary" style="background:linear-gradient(135deg,var(--amber),var(--orange));" onclick="handlePurchase()">💎 購入手続きへ</button>
+    <button class="btn" style="background:transparent;color:var(--s400);font-size:13px;margin-top:4px;" onclick="hideModal('payModal')">閉じる</button>
+  </div>
+</div>
+
+<!-- ═══ 家族招待ヘルプガイド ═══ -->
+<div class="modal-overlay" id="helpGuide" onclick="closeModal(event,'helpGuide')">
+  <div class="modal" style="max-height:90vh;overflow-y:auto;border-radius:20px 20px 0 0;">
+    <div class="modal-handle"></div>
+
+    <!-- タイトル -->
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:48px;margin-bottom:8px;">📖</div>
+      <h3 style="font-size:18px;margin-bottom:4px;">家族の招待かんたんガイド</h3>
+      <p class="desc" style="margin-bottom:0;">おじいちゃん・おばあちゃんでも<br>かんたんに参加できます！</p>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 1</div>
+      <div class="guide-step-title">📤 招待メッセージを送る</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div class="chat-bubble me">チョコの元気チェック、一緒に見れるようにしたよ！</div>
+            <div class="chat-bubble me">
+              <div style="background:var(--rose-l);border-radius:8px;padding:8px;font-size:11px;text-align:center;">
+                🐾 PawBon 元気チェック<br>
+                <strong style="color:var(--rose);font-size:14px;">P-8472</strong><br>
+                <span style="font-size:10px;color:var(--s400);">[🐾 友だち追加] [👨‍👩‍👦 参加]</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          上の <strong>「LINEで家族を招待する」</strong> ボタンを押して、家族のLINEトークに招待カードを送りましょう。<br><br>
+          💡 <strong>ポイント：</strong>一言メッセージも添えると伝わりやすいです！
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 2</div>
+      <div class="guide-step-title">➕ PawBonを友だち追加してもらう</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div style="text-align:center;padding:12px 8px;">
+              <div style="width:48px;height:48px;border-radius:50%;background:var(--rose-l);margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:24px;">🐾</div>
+              <div style="font-size:12px;font-weight:700;">PawBon 元気チェック</div>
+              <div style="font-size:10px;color:var(--s400);margin-top:2px;">公式アカウント</div>
+              <div style="background:#06C755;color:#fff;border-radius:20px;padding:6px 16px;font-size:11px;font-weight:700;margin-top:8px;display:inline-block;">＋ 追加</div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          招待カードの <strong style="color:#06C755;">「🐾 友だち追加する」</strong> ボタンをタップしてもらいます。<br><br>
+          まだPawBonを使ったことがない方は、まずこの友だち追加が必要です。
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 3</div>
+      <div class="guide-step-title">👨‍👩‍👦 「家族として参加する」をタップ</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div style="text-align:center;padding:12px 8px;">
+              <div style="font-size:10px;color:var(--s400);margin-bottom:4px;">招待カードの</div>
+              <div style="background:var(--rose);color:#fff;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;display:inline-block;">👨‍👩‍👦 家族として参加する</div>
+              <div style="margin-top:10px;font-size:10px;color:var(--s400);">または</div>
+              <div style="margin-top:6px;font-size:10px;color:var(--s500);">LINEメニューの<br>「👨‍👩‍👦 家族参加」をタップ</div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          招待カード下の赤いボタンをタップすると、家族参加ページが開きます。<br><br>
+          💡 招待カードのボタンをタップすると<strong>コードが自動入力</strong>されるので簡単です！
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="guide-step">
+      <div class="guide-step-num">STEP 4</div>
+      <div class="guide-step-title">🔑 コード入力 → 続柄選択 → 完了！</div>
+      <div class="guide-step-body">
+        <div class="guide-illust">
+          <div class="phone-mock">
+            <div class="phone-notch"></div>
+            <div style="padding:8px;">
+              <div style="text-align:center;margin-bottom:6px;">
+                <span style="font-size:10px;color:var(--s400);">家族コード</span><br>
+                <span style="font-family:monospace;font-size:18px;font-weight:700;color:var(--rose);letter-spacing:3px;">P-8472</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                <div style="text-align:center;padding:6px;border-radius:6px;background:var(--teal-l);border:1px solid var(--teal);font-size:9px;">👵 おばあちゃん</div>
+                <div style="text-align:center;padding:6px;border-radius:6px;border:1px solid var(--s200);font-size:9px;">👨 パパ</div>
+              </div>
+              <div style="text-align:center;margin-top:6px;font-size:20px;">🎉</div>
+              <div style="text-align:center;font-size:10px;font-weight:700;color:var(--teal-d);">登録完了！</div>
+            </div>
+          </div>
+        </div>
+        <div class="guide-text">
+          コードを入力（自動入力済み）→ 続柄を選んでタップ → <strong>完了</strong>！<br><br>
+          🎉 これだけで明日から毎日、ペットの元気レポートが届きます。
+        </div>
+      </div>
+    </div>
+
+    <!-- 困ったら -->
+    <div class="guide-trouble">
+      <div style="font-size:14px;font-weight:800;margin-bottom:10px;">😣 うまくいかない時は</div>
+      <div class="trouble-item">
+        <div class="trouble-q">Q. 「友だち追加」ボタンが出ない</div>
+        <div class="trouble-a">A. LINEアプリが最新版か確認してください。それでもダメな場合は、LINEの「友だち追加」→「ID検索」から <strong id="helpBotId">@pawbon</strong> を検索してください。</div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-q">Q. コードを手入力したい</div>
+        <div class="trouble-a">A. PawBonのLINEトーク画面下のメニューから「👨‍👩‍👦 家族参加」を選び、コード <strong id="helpCode">P-0000</strong> を手入力してください。</div>
+      </div>
+      <div class="trouble-item">
+        <div class="trouble-q">Q. スマホが苦手な家族に教えたい</div>
+        <div class="trouble-a">A. 電話しながら一緒にやるのがおすすめです！「LINEでメッセージ送ったから、そこに緑のボタンがあるからタップして」と伝えてあげてください。</div>
+      </div>
+    </div>
+
+    <!-- 閉じるボタン -->
+    <button class="btn btn-teal" style="margin-top:16px;" onclick="hideModal('helpGuide')">👍 わかりました！</button>
+    <button class="btn" style="background:transparent;color:var(--s400);font-size:13px;margin-top:4px;" onclick="hideModal('helpGuide')">閉じる</button>
+  </div>
+</div>
+
+<div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../config.js"></script>
+<script>
+var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
+var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var lineId = '';
+var familyData = null;
+var FREE_SLOTS = 2; // デフォルト値。DB読み込み後に上書き
+var bonusSlots = 0;
+var paidSlots = 0;
+var selectedPayQty = 1;
+
+function supaGet(path) {
+  return fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+  }).then(function(r){ return r.json(); });
+}
+
+// ═══ LIFF ═══
+async function initLiff() {
+  var params = new URLSearchParams(window.location.search);
+  var paramId = params.get('lineId') || params.get('lineid');
+  if (paramId) {
+    lineId = paramId;
+    loadFamily();
+    return;
+  }
+
+  try {
+    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.family });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    var profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) {
+    try {
+      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
+      if (Array.isArray(latest) && latest.length > 0) lineId = latest[0].owner_line_id;
+    } catch (e2) {}
+  }
+  if (lineId) {
+    loadFamily();
+  } else {
+    document.getElementById('loading').innerHTML =
+      '<div class="empty"><div class="icon">⚠️</div>LINEからアクセスしてください</div>';
+  }
+}
+initLiff();
+
+// ═══ Load ═══
+async function loadFamily() {
+  try {
+    // 1. このlineIdがオーナーの家族を検索
+    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+    var role = '';
+    var family = null;
+
+    if (Array.isArray(families) && families.length > 0) {
+      family = families[0];
+      role = 'owner';
+    }
+
+    // 2. オーナーでない場合、メンバーレコードを検索
+    if (!family) {
+      var memberRecords = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&order=registered_at.desc');
+      var memberOf = Array.isArray(memberRecords) ? memberRecords : [];
+
+      for (var i = 0; i < memberOf.length; i++) {
+        var mCode = memberOf[i].family_code;
+        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(mCode) + '&limit=1');
+        if (Array.isArray(fam) && fam.length > 0) {
+          if (fam[0].owner_line_id !== lineId) {
+            family = fam[0];
+            role = 'member';
+            break;
+          }
+        }
+      }
+    }
+
+    if (!family) {
+      document.getElementById('loading').innerHTML =
+        '<div class="empty"><div class="icon">📝</div>まだ登録されていません<br><br>先にペット登録を行ってください</div>';
+      return;
+    }
+
+    var rawMembers = await supaGet('family_members?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=registered_at.asc');
+    var allMembers = Array.isArray(rawMembers) ? rawMembers : [];
+
+    var rawCheckins;
+    try {
+      rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=checkin_date.desc&limit=7');
+    } catch(ec) { rawCheckins = null; }
+    if (!Array.isArray(rawCheckins)) {
+      try {
+        rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=id.desc&limit=7');
+      } catch(ec2) { rawCheckins = []; }
+    }
+    var recentCheckins = Array.isArray(rawCheckins) ? rawCheckins : [];
+
+    // ボーナス枠: invited_by を持つ pet_families の数（この人が招待した新規オーナー数）
+    bonusSlots = family.bonus_slots || 0;
+    paidSlots = family.paid_slots || 0;
+    FREE_SLOTS = family.max_members || 2; // 後台で設定した基本枠を反映
+
+    familyData = {
+      role: role,
+      familyCode: family.family_code,
+      referralCode: family.referral_code || '',
+      petNames: family.pet_names,
+      area: family.area + ' ' + (family.area_detail || ''),
+      ownerLineId: family.owner_line_id,
+      ownerName: family.owner_name || '',
+      members: allMembers,
+      recentCheckins: recentCheckins
+    };
+
+    // オーナーの表示名をメンバーリストから取得
+    allMembers.forEach(function(m) {
+      if (m.member_line_id === family.owner_line_id && m.relation === 'オーナー') {
+        familyData.ownerName = m.display_name || familyData.ownerName;
+      }
+    });
+
+    document.getElementById('loading').style.display = 'none';
+
+    if (role === 'owner') {
+      renderOwnerView();
+    } else {
+      renderMemberView();
+    }
+  } catch (e) {
+    document.getElementById('loading').innerHTML =
+      '<div class="empty"><div class="icon">❌</div>データ読み込みエラー<br><br>' + e.message + '</div>';
+  }
+}
+
+// ═══ Render ═══
+var relationIcons = {
+  'オーナー':'🏠','パパ':'👨','ママ':'👩',
+  'おじいちゃん':'👴','おばあちゃん':'👵','家族':'👥',
+  '兄弟・姉妹':'👦','友人':'👫','ペットシッター':'🧑‍⚕️'
+};
+
+function renderMemberCards(members, containerId, showDelete) {
+  var container = document.getElementById(containerId);
+  if (!members || members.length === 0) {
+    container.innerHTML = '<div class="empty"><div class="icon">👋</div>まだ家族が登録されていません<br><br>上のボタンから招待しましょう！</div>';
+    return;
+  }
+  container.innerHTML = members.map(function(m) {
+    var icon = relationIcons[m.relation] || '👤';
+    var date = m.registered_at ? m.registered_at.substring(0, 10) : '';
+    var deleteBtn = '';
+    if (showDelete) {
+      deleteBtn = '<div class="member-delete" onclick="confirmDeleteMember(\'' +
+        escapeHtml(m.member_line_id) + '\',\'' + escapeHtml(m.display_name) + '\')" title="削除">✕</div>';
+    }
+    return '<div class="member-card">' +
+      '<div class="member-av">' + icon + '</div>' +
+      '<div class="member-info">' +
+        '<div class="name">' + escapeHtml(m.display_name) + '</div>' +
+        '<div class="detail">' + escapeHtml(m.relation || '') + ' · ' + date + ' 登録</div>' +
+      '</div>' +
+      '<div class="member-status">通知ON</div>' +
+      deleteBtn +
+    '</div>';
+  }).join('');
+}
+
+function renderCheckins(checkins, containerId) {
+  var container = document.getElementById(containerId);
+  if (!checkins || checkins.length === 0) {
+    container.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--s400);font-size:12px;">まだチェック記録がありません</div>';
+    return;
+  }
+  var weekdays = ['日','月','火','水','木','金','土'];
+  container.innerHTML = checkins.map(function(r) {
+    var dateStr = r.checkin_date || r.check_date || r.date || '';
+    var d = new Date(dateStr);
+    var label = isNaN(d.getTime()) ? dateStr : ((d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）');
+    if (r.status === 'genki') {
+      return '<div class="record-row"><span>' + label + '</span><span class="g">✅ 全員元気</span></div>';
+    } else {
+      var worry = r.worried_pets || '心配';
+      return '<div class="record-row"><span>' + label + '</span><span class="w">⚠️ ' + escapeHtml(worry) + '</span></div>';
+    }
+  }).join('');
+}
+
+function renderOwnerView() {
+  document.getElementById('ownerView').style.display = 'block';
+  document.getElementById('headerSub').textContent = familyData.petNames + ' · オーナー';
+  document.getElementById('ownerCode').textContent = familyData.familyCode;
+
+  // オーナー以外
+  var otherMembers = familyData.members.filter(function(m) { return m.member_line_id !== lineId; });
+
+  // 名額計算
+  var totalSlots = FREE_SLOTS + bonusSlots + paidSlots;
+  var usedSlots = otherMembers.length;
+  var percent = totalSlots > 0 ? Math.min(100, Math.round((usedSlots / totalSlots) * 100)) : 0;
+
+  document.getElementById('quotaCount').textContent = usedSlots + ' / ' + totalSlots;
+  var fill = document.getElementById('quotaFill');
+  fill.style.width = percent + '%';
+  if (usedSlots >= totalSlots) fill.classList.add('full');
+
+  // 名額情報
+  var quotaInfo = document.getElementById('quotaInfo');
+  var parts = [];
+  parts.push('基本枠 ' + FREE_SLOTS);
+  if (bonusSlots > 0) parts.push('招待ボーナス +' + bonusSlots);
+  if (paidSlots > 0) parts.push('購入枠 +' + paidSlots);
+  var remaining = totalSlots - usedSlots;
+
+  if (remaining > 0) {
+    quotaInfo.innerHTML = '<div class="info teal">🎫 ' + parts.join(' / ') + '<br>残り <strong>' + remaining + '枠</strong> 招待可能です</div>';
+  } else {
+    quotaInfo.innerHTML = '<div class="info rose">🔒 ' + parts.join(' / ') + '<br>メンバー枠がいっぱいです。下から枠を追加してください</div>';
+  }
+
+  // メンバーカード（削除ボタン付き）
+  renderMemberCards(otherMembers, 'memberList', true);
+  renderCheckins(familyData.recentCheckins, 'ownerHistory');
+
+  if (remaining > 2) {
+    document.getElementById('upgradeSection').style.display = 'none';
+  }
+
+  // 紹介コード表示
+  if (familyData.referralCode) {
+    document.getElementById('referralCodeBox').textContent = familyData.referralCode;
+    document.getElementById('referralStats').textContent = '紹介済み: ' + bonusSlots + '人';
+  }
+}
+
+function renderMemberView() {
+  document.getElementById('memberView').style.display = 'block';
+  document.getElementById('headerSub').textContent = familyData.petNames + ' · 家族メンバー';
+  document.getElementById('memberPets').textContent = '🐾 ' + familyData.petNames;
+  document.getElementById('memberArea').textContent = '📍 ' + familyData.area;
+
+  // 管理者（オーナー）カード
+  var ownerName = familyData.ownerName || '飼い主さん';
+  var ownerMember = null;
+  familyData.members.forEach(function(m) {
+    if (m.member_line_id === familyData.ownerLineId) ownerMember = m;
+  });
+  var ownerDate = ownerMember && ownerMember.registered_at ? ownerMember.registered_at.substring(0, 10) + ' 登録' : '';
+  document.getElementById('memberOwnerCard').innerHTML =
+    '<div class="owner-card">' +
+      '<div class="av">🏠</div>' +
+      '<div class="info-col">' +
+        '<div class="name">' + escapeHtml(ownerName) + '</div>' +
+        '<div class="sub">🐾 ' + escapeHtml(familyData.petNames) + ' · ' + ownerDate + '</div>' +
+      '</div>' +
+      '<div class="badge-owner">管理者</div>' +
+    '</div>';
+
+  // 他の家族メンバー（自分とオーナーを除外）
+  var otherMembers = familyData.members.filter(function(m) {
+    return m.member_line_id !== lineId && m.member_line_id !== familyData.ownerLineId;
+  });
+
+  if (otherMembers.length > 0) {
+    document.getElementById('memberOthersTitle').style.display = '';
+    renderMemberCards(otherMembers, 'memberFamilyList', false);
+  } else {
+    document.getElementById('memberOthersTitle').style.display = 'none';
+    document.getElementById('memberFamilyList').innerHTML =
+      '<div style="text-align:center;padding:12px;color:var(--s400);font-size:12px;">あなた以外の家族メンバーはまだいません</div>';
+  }
+
+  // あなたの情報
+  var myMember = null;
+  familyData.members.forEach(function(m) {
+    if (m.member_line_id === lineId) myMember = m;
+  });
+  if (myMember) {
+    var myIcon = relationIcons[myMember.relation] || '👤';
+    var myDate = myMember.registered_at ? myMember.registered_at.substring(0, 10) : '-';
+    document.getElementById('memberMyInfo').innerHTML =
+      '<div class="my-info-row"><span class="label">続柄</span><span class="val">' + myIcon + ' ' + escapeHtml(myMember.relation || '') + '</span></div>' +
+      '<div class="my-info-row"><span class="label">表示名</span><span class="val">' + escapeHtml(myMember.display_name || '') + '</span></div>' +
+      '<div class="my-info-row"><span class="label">登録日</span><span class="val">' + myDate + '</span></div>';
+  }
+
+  renderCheckins(familyData.recentCheckins, 'memberHistory');
+}
+
+// ═══ メンバー削除 ═══
+function confirmDeleteMember(memberLineId, displayName) {
+  if (confirm('⚠️ 「' + displayName + '」を家族から削除しますか？\n\nこの操作は取り消せません。\n削除すると、この方には元気チェックの通知が届かなくなります。')) {
+    deleteMember(memberLineId, displayName);
+  }
+}
+
+async function deleteMember(memberLineId, displayName) {
+  try {
+    var res = await fetch(SUPA_URL + '/rest/v1/family_members?family_code=eq.' + encodeURIComponent(familyData.familyCode) + '&member_line_id=eq.' + encodeURIComponent(memberLineId), {
+      method: 'DELETE',
+      headers: {
+        'apikey': SUPA_KEY,
+        'Authorization': 'Bearer ' + SUPA_KEY
+      }
+    });
+    if (res.ok) {
+      alert('✅ 「' + displayName + '」を削除しました');
+      // メンバーリストを更新
+      familyData.members = familyData.members.filter(function(m) { return m.member_line_id !== memberLineId; });
+      renderOwnerView();
+    } else {
+      var err = await res.text();
+      alert('❌ 削除エラー: ' + err);
+    }
+  } catch(e) {
+    alert('❌ 通信エラー: ' + e.message);
+  }
+}
+
+// ═══ LINE シェア（Flex Message + 参加リンク付き） ═══
+function getJoinUrl(code) {
+  // LIFF URL with family code parameter
+  var liffId = PAWBON_CONFIG.LIFF_ID.familyJoin;
+  var codeNum = code.replace('P-','');
+  return 'https://liff.line.me/' + liffId + '?code=' + codeNum;
+}
+
+function getAddFriendAndJoinUrl(code) {
+  // LINE友だち追加 → 追加後にLIFFで家族参加
+  var codeNum = code.replace('P-','');
+  var liffId = PAWBON_CONFIG.LIFF_ID.familyJoin;
+  // LINE URL scheme: 友だち追加後にLIFFページへ遷移
+  return PAWBON_CONFIG.LINE_ADD_FRIEND_URL + '#~/' + 'family-join?code=' + codeNum;
+}
+
+function shareLine() {
+  var joinUrl = getJoinUrl(familyData.familyCode);
+  var addFriendUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var codeNum = familyData.familyCode.replace('P-','');
+
+  if (typeof liff !== 'undefined' && liff.isApiAvailable('shareTargetPicker')) {
+    liff.shareTargetPicker([
+      {
+        type: 'flex',
+        altText: '🐾 ' + familyData.petNames + 'の家族になりませんか？ 家族コード: ' + familyData.familyCode,
+        contents: {
+          type: 'bubble',
+          size: 'mega',
+          header: {
+            type: 'box', layout: 'horizontal',
+            backgroundColor: '#FFF0F2',
+            paddingAll: '16px',
+            contents: [
+              { type: 'text', text: '🐾', size: 'xl', flex: 0 },
+              { type: 'text', text: 'PawBon 元気チェック', size: 'sm', weight: 'bold', color: '#E8475F', gravity: 'center', margin: 'sm' }
+            ]
+          },
+          hero: {
+            type: 'box', layout: 'vertical',
+            backgroundColor: '#FFFFFF',
+            paddingAll: '20px',
+            contents: [
+              { type: 'text', text: familyData.petNames + 'の', size: 'md', weight: 'bold', align: 'center' },
+              { type: 'text', text: '家族になりませんか？', size: 'lg', weight: 'bold', align: 'center', margin: 'xs' }
+            ]
+          },
+          body: {
+            type: 'box', layout: 'vertical',
+            paddingAll: '20px',
+            contents: [
+              { type: 'box', layout: 'vertical',
+                backgroundColor: '#FFF0F2',
+                cornerRadius: '12px',
+                paddingAll: '16px',
+                contents: [
+                  { type: 'text', text: '家族コード', size: 'xs', color: '#999999', align: 'center' },
+                  { type: 'text', text: familyData.familyCode, size: 'xxl', weight: 'bold', color: '#E8475F', align: 'center', margin: 'sm' }
+                ]
+              },
+              { type: 'separator', margin: 'lg' },
+              { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm', contents: [
+                { type: 'text', text: '📱 参加方法', size: 'sm', weight: 'bold', color: '#1A1A2E' },
+                { type: 'text', text: '❶ 下のボタンからPawBonを友だち追加', size: 'xs', color: '#64748B', margin: 'sm' },
+                { type: 'text', text: '❷ 「家族として参加」ボタンをタップ', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '❸ 家族コードを入力して完了！', size: 'xs', color: '#64748B' }
+              ]},
+              { type: 'text', text: '毎日ペットの元気状況が届きます 💌', size: 'xxs', color: '#AAAAAA', align: 'center', wrap: true, margin: 'lg' }
+            ]
+          },
+          footer: {
+            type: 'box', layout: 'vertical',
+            paddingAll: '16px',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '🐾 PawBonを友だち追加する',
+                  uri: addFriendUrl
+                },
+                style: 'primary',
+                color: '#06C755',
+                height: 'md'
+              },
+              {
+                type: 'button',
+                action: {
+                  type: 'uri',
+                  label: '👨‍👩‍👦 家族として参加する',
+                  uri: joinUrl
+                },
+                style: 'primary',
+                color: '#E8475F',
+                height: 'md'
+              }
+            ]
+          }
+        }
+      }
+    ]).then(function(res) {
+      if (res) alert('✅ 招待を送信しました！');
+    }).catch(function() {
+      copyCode();
+    });
+  } else {
+    copyCode();
+  }
+}
+
+// ═══ コピー（リンク付き） ═══
+function copyCode() {
+  var code = familyData.familyCode;
+  var addUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var joinUrl = getJoinUrl(code);
+  var text = '🐾 PawBon 元気チェック\n\n' +
+    familyData.petNames + 'の家族になりませんか？\n\n' +
+    '家族コード: ' + code + '\n\n' +
+    '📱 参加方法:\n' +
+    '① まずPawBonを友だち追加 👇\n' + addUrl + '\n\n' +
+    '② 下のリンクから家族参加 👇\n' + joinUrl + '\n\n' +
+    '毎日ペットの元気状況が届きます 💌';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      alert('✅ コピーしました！\n\nLINEのトークに貼り付けて送信してください 🐾');
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ コピーしました！\n\nLINEのトークに貼り付けて送信してください 🐾');
+  }
+}
+
+// ═══ その他シェア（Web Share API） ═══
+function shareGeneral() {
+  var code = familyData.familyCode;
+  var addUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var joinUrl = getJoinUrl(code);
+  var text = '🐾 PawBon 元気チェック\n' +
+    familyData.petNames + 'の家族になりませんか？\n\n' +
+    '家族コード: ' + code + '\n\n' +
+    '① 友だち追加: ' + addUrl + '\n' +
+    '② 家族参加: ' + joinUrl;
+  if (navigator.share) {
+    navigator.share({ title: 'PawBon 家族招待', text: text }).catch(function(){});
+  } else {
+    copyCode();
+  }
+}
+
+// ═══ 招待モーダル ═══
+function showInviteModal() { document.getElementById('inviteModal').classList.add('show'); }
+function showPayModal() { document.getElementById('payModal').classList.add('show'); }
+function showHelpGuide() {
+  // 動的にコードとBOT IDを埋め込む
+  if (familyData) {
+    var codeEl = document.getElementById('helpCode');
+    if (codeEl) codeEl.textContent = familyData.familyCode;
+  }
+  var botEl = document.getElementById('helpBotId');
+  if (botEl && PAWBON_CONFIG.LINE_BOT_ID) botEl.textContent = PAWBON_CONFIG.LINE_BOT_ID;
+  document.getElementById('helpGuide').classList.add('show');
+}
+function hideModal(id) { document.getElementById(id).classList.remove('show'); }
+function closeModal(e, id) { if (e.target === e.currentTarget) hideModal(id); }
+
+function shareReferralLine() {
+  var addFriendUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var refCode = familyData.referralCode || '';
+  if (typeof liff !== 'undefined' && liff.isApiAvailable('shareTargetPicker')) {
+    liff.shareTargetPicker([
+      {
+        type: 'flex',
+        altText: '🐾 PawBonでペットの元気を毎日チェック！紹介コード: ' + refCode,
+        contents: {
+          type: 'bubble', size: 'mega',
+          header: {
+            type: 'box', layout: 'horizontal', backgroundColor: '#EDFCF7', paddingAll: '16px',
+            contents: [
+              { type: 'text', text: '🎁', size: 'xl', flex: 0 },
+              { type: 'text', text: 'PawBon のご招待', size: 'sm', weight: 'bold', color: '#1FA882', gravity: 'center', margin: 'sm' }
+            ]
+          },
+          body: {
+            type: 'box', layout: 'vertical', paddingAll: '20px',
+            contents: [
+              { type: 'text', text: 'ペットの元気を\n毎日チェック！', size: 'lg', weight: 'bold', wrap: true, align: 'center' },
+              { type: 'text', text: '家族や友だちにペットの元気状況を\n簡単にシェアできるサービスです', size: 'xs', color: '#999999', wrap: true, margin: 'md', align: 'center' },
+              { type: 'separator', margin: 'lg' },
+              { type: 'box', layout: 'vertical', margin: 'lg', backgroundColor: '#EDFCF7', cornerRadius: '12px', paddingAll: '14px',
+                contents: [
+                  { type: 'text', text: '紹介コード', size: 'xxs', color: '#1FA882', weight: 'bold', align: 'center' },
+                  { type: 'text', text: refCode, size: 'xl', weight: 'bold', color: '#1FA882', align: 'center', margin: 'sm' },
+                  { type: 'text', text: '登録時にこのコードを入力してね！', size: 'xxs', color: '#94A3B8', align: 'center', margin: 'sm' }
+                ]
+              },
+              { type: 'box', layout: 'vertical', margin: 'lg', spacing: 'sm', contents: [
+                { type: 'text', text: '✅ 完全無料で始められます', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '✅ 毎日30秒の元気チェック', size: 'xs', color: '#64748B' },
+                { type: 'text', text: '✅ 家族に自動で通知', size: 'xs', color: '#64748B' }
+              ]}
+            ]
+          },
+          footer: {
+            type: 'box', layout: 'vertical', paddingAll: '16px',
+            contents: [
+              {
+                type: 'button',
+                action: { type: 'uri', label: '🐾 PawBonを友だち追加する', uri: addFriendUrl },
+                style: 'primary', color: '#06C755', height: 'md'
+              },
+              { type: 'text', text: '友だち追加後、ペット登録でコードを入力！', size: 'xxs', color: '#AAAAAA', align: 'center', margin: 'sm' }
+            ]
+          }
+        }
+      }
+    ]).then(function(res) {
+      if (res) {
+        hideModal('inviteModal');
+        alert('✅ 招待を送信しました！\n\n友だちが紹介コードを入力して登録すると\nあなたの家族枠が+1されます 🎉');
+      }
+    }).catch(function(){});
+  } else {
+    copyReferralMessage();
+  }
+}
+
+function copyReferralCode() {
+  var code = familyData.referralCode || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(function() {
+      alert('✅ 紹介コードをコピーしました！');
+    });
+  }
+}
+
+function copyReferralMessage() {
+  var addUrl = PAWBON_CONFIG.LINE_ADD_FRIEND_URL;
+  var refCode = familyData.referralCode || '';
+  var text = '🐾 PawBonでペットの元気を毎日チェック！\n\n' +
+    '家族や友だちにペットの元気状況を簡単シェア。\n\n' +
+    '🎁 紹介コード: ' + refCode + '\n' +
+    '（登録時に入力すると特典あり！）\n\n' +
+    '👉 まず友だち追加して始めよう！\n' + addUrl;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(function() {
+      alert('✅ 紹介メッセージをコピーしました！\n\nLINEのトークに貼り付けて送信してください');
+    });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ 紹介メッセージをコピーしました！');
+  }
+}
+
+// ═══ 購入 ═══
+function selectQty(el, qty) {
+  selectedPayQty = qty;
+  document.querySelectorAll('.pay-qty').forEach(function(b) {
+    b.style.borderColor = '';
+    b.style.background = '';
+    b.style.color = '';
+  });
+  el.style.borderColor = 'var(--amber)';
+  el.style.background = 'var(--amber-l)';
+  el.style.color = 'var(--orange)';
+}
+
+function handlePurchase() {
+  var monthly = selectedPayQty * 100;
+  alert('💎 購入機能は近日公開予定です！\n\n' + selectedPayQty + '枠 × ¥100 = 月額¥' + monthly + '\n\nリリースまでお待ちください 🐾');
+  hideModal('payModal');
+}
+
+// ═══ Util ═══
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

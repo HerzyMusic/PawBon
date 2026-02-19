@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — 元気レポート</title>
+<style>
+:root{--rose:#E8475F;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:20px;}
+.header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
+.section{padding:16px;}
+.stat-row{display:flex;gap:8px;margin-bottom:16px;}
+.stat-box{flex:1;background:var(--s100);border-radius:14px;padding:14px 8px;text-align:center;}
+.stat-box .sv{font-size:24px;font-weight:900;}
+.stat-box .sv.rose{color:var(--rose);}
+.stat-box .sv.teal{color:var(--teal-d);}
+.stat-box .sv.amber{color:var(--amber);}
+.stat-box .sl{font-size:9px;color:var(--s400);margin-top:2px;}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.cal-month{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cal-month h3{font-size:15px;font-weight:800;}
+.cal-month .nav{width:30px;height:30px;border-radius:50%;background:var(--s100);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;border:none;}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;}
+.cal-day-label{font-size:9px;font-weight:700;color:var(--s400);padding:4px 0;}
+.cal-day{aspect-ratio:1;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--s500);}
+.cal-day.genki{background:#DCFCE7;color:var(--teal-d);}
+.cal-day.worry{background:#FEF3C7;color:#92400E;}
+.cal-day.today{box-shadow:0 0 0 2px var(--rose);}
+.cal-legend{display:flex;gap:16px;margin-top:10px;font-size:10px;color:var(--s400);justify-content:center;}
+.cal-legend span::before{content:'';display:inline-block;width:10px;height:10px;border-radius:3px;vertical-align:middle;margin-right:4px;}
+.cal-legend .g::before{background:#DCFCE7;}
+.cal-legend .y::before{background:#FEF3C7;}
+.section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
+.record-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--s100);font-size:13px;}
+.record-row:last-child{border:none;}
+.record-row .date{color:var(--s500);}
+.record-row .status-g{color:var(--teal-d);font-weight:700;}
+.record-row .status-w{color:#92400E;font-weight:700;}
+.region{display:flex;align-items:center;gap:10px;background:var(--teal-l);border-radius:14px;padding:12px 14px;margin-bottom:16px;}
+.region .num{font-size:24px;font-weight:900;color:var(--teal-d);}
+.region .txt{font-size:11px;color:var(--s500);line-height:1.4;}
+.loading{text-align:center;padding:60px 20px;color:var(--s400);}
+.pet-summary{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px;}
+.pet-tag{padding:6px 12px;border-radius:20px;font-size:12px;font-weight:700;background:var(--teal-l);color:var(--teal-d);}
+.empty-state{text-align:center;padding:30px 16px;color:var(--s400);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📊 元気レポート</h1>
+  <p id="headerSub">読み込み中...</p>
+</div>
+
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">📊</div>
+  <div>読み込み中...</div>
+</div>
+
+<div id="content" style="display:none;">
+  <!-- ペット情報 -->
+  <div class="section">
+    <div id="petTags" class="pet-summary"></div>
+
+    <!-- Stats -->
+    <div class="stat-row">
+      <div class="stat-box"><div class="sv rose" id="totalDays">0</div><div class="sl">トータル日数</div></div>
+      <div class="stat-box"><div class="sv teal" id="streak">0</div><div class="sl">連続日数 🔥</div></div>
+      <div class="stat-box"><div class="sv amber" id="healthRate">-</div><div class="sl">元気率</div></div>
+    </div>
+
+    <div class="region">
+      <div class="num" id="regionCount">-</div>
+      <div class="txt">匹が<span id="regionArea">地域</span>で<br>今日元気です 🏘️</div>
+    </div>
+  </div>
+
+  <!-- Calendar -->
+  <div class="section" style="padding-top:0;">
+    <div class="card">
+      <div class="cal-month">
+        <button class="nav" onclick="changeMonth(-1)">‹</button>
+        <h3 id="calTitle">📅 2026年2月</h3>
+        <button class="nav" onclick="changeMonth(1)">›</button>
+      </div>
+      <div class="cal-days" id="calGrid"></div>
+      <div class="cal-legend">
+        <span class="g">元気</span>
+        <span class="y">心配</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="section" style="padding-top:0;">
+    <div class="section-title">📋 最近のチェック履歴</div>
+    <div class="card" id="historyList" style="padding:0 16px;"></div>
+  </div>
+</div>
+
+<div class="footer">PawBon 元気チェック v0.4.3 Beta<br>© 2026 PawBon Inc.</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../config.js"></script>
+<script>
+var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
+var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var lineId = '';
+var familyCode = '';
+var allRecords = [];
+var currentYear, currentMonth;
+
+function supaGet(path) {
+  return fetch(SUPA_URL + '/rest/v1/' + path, {
+    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
+  }).then(function(r){ return r.json(); });
+}
+
+// ═══ LIFF ═══
+async function initLiff() {
+  try {
+    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    var profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) {
+    try {
+      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
+      if (latest && latest.length > 0) lineId = latest[0].owner_line_id;
+    } catch (e2) {}
+  }
+  loadReport();
+}
+initLiff();
+
+// ═══ Helper: レコードから日付を取得 ═══
+function getDate(r) {
+  return r.checkin_date || r.check_date || r.date || '';
+}
+
+// ═══ Load ═══
+async function loadReport() {
+  try {
+    // 1. 家族を特定
+    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+    var family = null;
+
+    if (families && families.length > 0) {
+      family = families[0];
+    } else {
+      var members = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+      if (members && members.length > 0) {
+        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(members[0].family_code) + '&limit=1');
+        if (fam && fam.length > 0) family = fam[0];
+      }
+    }
+
+    if (!family) {
+      document.getElementById('loading').innerHTML =
+        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
+      return;
+    }
+
+    familyCode = family.family_code;
+
+    // 2. 全チェックイン記録を取得（order フォールバック付き）
+    var rawRecords;
+    try {
+      rawRecords = await supaGet(
+        'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+        '&order=checkin_date.desc&limit=365'
+      );
+    } catch(e1) { rawRecords = null; }
+
+    if (!Array.isArray(rawRecords)) {
+      try {
+        rawRecords = await supaGet(
+          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+          '&order=check_date.desc&limit=365'
+        );
+      } catch(e2) { rawRecords = null; }
+    }
+
+    if (!Array.isArray(rawRecords)) {
+      try {
+        rawRecords = await supaGet(
+          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
+          '&order=id.desc&limit=365'
+        );
+      } catch(e3) { rawRecords = []; }
+    }
+
+    allRecords = Array.isArray(rawRecords) ? rawRecords : [];
+
+    // JS側で日付降順ソート
+    allRecords.sort(function(a, b) {
+      return getDate(b).localeCompare(getDate(a));
+    });
+
+    // 3. 同地域の今日の元気数（概算）
+    var today = new Date().toISOString().substring(0, 10);
+    var regionCheckins = [];
+    try {
+      var rawRegion = await supaGet(
+        'checkins?checkin_date=eq.' + today + '&status=eq.genki&limit=100'
+      );
+      regionCheckins = Array.isArray(rawRegion) ? rawRegion : [];
+    } catch(e3) {
+      try {
+        var rawRegion2 = await supaGet(
+          'checkins?check_date=eq.' + today + '&status=eq.genki&limit=100'
+        );
+        regionCheckins = Array.isArray(rawRegion2) ? rawRegion2 : [];
+      } catch(e4) {}
+    }
+
+    // 4. 統計計算
+    var totalDays = allRecords.length;
+    var genkiDays = allRecords.filter(function(r){ return r.status === 'genki'; }).length;
+    var healthRate = totalDays > 0 ? Math.round((genkiDays / totalDays) * 100) : 0;
+    var streak = calcStreak(allRecords);
+
+    // 5. レンダリング
+    var petNames = family.pet_names.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var petBreeds = (family.breeds || '').split(',').map(function(s){ return s.trim(); });
+
+    document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
+
+    // ペットタグ
+    document.getElementById('petTags').innerHTML = petNames.map(function(name, i) {
+      var breed = petBreeds[i] || '';
+      return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
+    }).join('');
+
+    document.getElementById('totalDays').textContent = totalDays;
+    document.getElementById('streak').textContent = streak;
+    document.getElementById('healthRate').textContent = healthRate + '%';
+    document.getElementById('regionCount').textContent = regionCheckins.length || '—';
+    document.getElementById('regionArea').textContent = family.area + ' ' + (family.area_detail || '');
+
+    var now = new Date();
+    currentYear = now.getFullYear();
+    currentMonth = now.getMonth() + 1;
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+
+    renderCalendar();
+    renderHistory();
+
+  } catch (e) {
+    document.getElementById('loading').innerHTML =
+      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+  }
+}
+
+// ═══ 連続日数計算 ═══
+function calcStreak(records) {
+  if (!records || records.length === 0) return 0;
+
+  var dates = records.map(function(r){ return getDate(r); }).filter(Boolean).sort().reverse();
+
+  var today = new Date();
+  var streak = 0;
+  var checkDate = new Date(today);
+
+  var todayStr = formatDate(today);
+  if (dates.indexOf(todayStr) === -1) {
+    checkDate.setDate(checkDate.getDate() - 1);
+  }
+
+  var dateSet = {};
+  dates.forEach(function(d){ dateSet[d] = true; });
+
+  for (var i = 0; i < 365; i++) {
+    var ds = formatDate(checkDate);
+    if (dateSet[ds]) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function formatDate(d) {
+  var y = d.getFullYear();
+  var m = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
+// ═══ Calendar ═══
+function renderCalendar() {
+  document.getElementById('calTitle').textContent = '📅 ' + currentYear + '年' + currentMonth + '月';
+
+  var firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
+  var offset = firstDay === 0 ? 6 : firstDay - 1; // 月曜始まり
+  var daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+  var now = new Date();
+  var todayD = now.getDate();
+  var todayM = now.getMonth() + 1;
+  var todayY = now.getFullYear();
+
+  // 記録をdateでマッピング
+  var dateMap = {};
+  allRecords.forEach(function(r) {
+    dateMap[getDate(r)] = r.status;
+  });
+
+  var html = '';
+  var labels = ['月','火','水','木','金','土','日'];
+  labels.forEach(function(l) {
+    html += '<div class="cal-day-label">' + l + '</div>';
+  });
+
+  for (var i = 0; i < offset; i++) html += '<div class="cal-day"></div>';
+
+  for (var d = 1; d <= daysInMonth; d++) {
+    var ds = currentYear + '-' + String(currentMonth).padStart(2,'0') + '-' + String(d).padStart(2,'0');
+    var status = dateMap[ds];
+    var cls = 'cal-day';
+    if (status === 'genki') cls += ' genki';
+    else if (status === 'worry') cls += ' worry';
+    if (d === todayD && currentMonth === todayM && currentYear === todayY) cls += ' today';
+    html += '<div class="' + cls + '">' + d + '</div>';
+  }
+
+  document.getElementById('calGrid').innerHTML = html;
+}
+
+function changeMonth(dir) {
+  currentMonth += dir;
+  if (currentMonth > 12) { currentMonth = 1; currentYear++; }
+  if (currentMonth < 1) { currentMonth = 12; currentYear--; }
+  renderCalendar();
+}
+
+// ═══ History ═══
+function renderHistory() {
+  var container = document.getElementById('historyList');
+  if (!allRecords || allRecords.length === 0) {
+    container.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--s400);font-size:12px;">まだチェック記録がありません</div>';
+    return;
+  }
+
+  var weekdays = ['日','月','火','水','木','金','土'];
+  container.innerHTML = allRecords.slice(0, 14).map(function(r) {
+    var dateStr = getDate(r);
+    var d = new Date(dateStr);
+    var label = isNaN(d.getTime()) ? dateStr : ((d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）');
+    if (r.status === 'genki') {
+      return '<div class="record-row"><span class="date">' + label + '</span><span class="status-g">✅ 全員元気</span></div>';
+    } else {
+      var detail = escapeHtml(r.worried_pets || '心配');
+      if (r.symptoms) detail += '（' + escapeHtml(r.symptoms) + '）';
+      return '<div class="record-row"><span class="date">' + label + '</span><span class="status-w">⚠️ ' + detail + '</span></div>';
+    }
+  }).join('');
+}
+
+// ═══ Util ═══
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>

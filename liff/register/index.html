@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — ペット登録</title>
+<style>
+:root{--rose:#E8475F;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;}
+.header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
+.progress{display:flex;gap:4px;padding:0 16px;margin-top:12px;}
+.progress .dot{flex:1;height:4px;border-radius:2px;background:var(--s200);}
+.progress .dot.active{background:var(--teal);}
+.section{padding:20px 16px;}
+.form-label{font-size:12px;font-weight:700;color:var(--s500);margin-bottom:6px;display:block;}
+.form-input,.form-select{width:100%;padding:12px 14px;border:1.5px solid var(--s200);border-radius:12px;font-size:14px;background:var(--card);appearance:none;font-family:inherit;margin-bottom:12px;}
+.form-input:focus,.form-select:focus{outline:none;border-color:var(--teal);}
+.choice-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.choice-btn{padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--s200);background:var(--card);transition:all .15s;}
+.choice-btn.selected{border-color:var(--teal);background:var(--teal-l);color:var(--teal-d);}
+.btn{display:block;width:100%;padding:14px;border-radius:14px;font-size:15px;font-weight:800;text-align:center;cursor:pointer;border:none;font-family:inherit;transition:all .15s;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#fff;box-shadow:0 4px 16px rgba(46,205,167,.25);}
+.btn-outline{background:var(--card);color:var(--s500);border:1.5px solid var(--s200);margin-top:8px;}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.info{padding:12px;border-radius:12px;font-size:12px;text-align:center;background:var(--amber-l);color:var(--orange);margin-top:12px;}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1.5px solid var(--s200);}
+.data-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--s100);font-size:13px;}
+.data-row:last-child{border:none;}
+.data-row .label{color:var(--s500);}
+.data-row .value{font-weight:700;text-align:right;max-width:60%;}
+.done{text-align:center;padding:40px 16px;}
+.done .icon{font-size:64px;}
+.done h2{font-size:20px;font-weight:900;margin-top:12px;}
+.done p{font-size:13px;color:var(--s500);margin-top:6px;line-height:1.6;}
+.code-box{background:linear-gradient(135deg,#FFF0F2,#FFF4F0);border:1.5px dashed var(--rose);border-radius:16px;padding:20px;text-align:center;margin:16px 0;}
+.code-box .code{font-family:monospace;font-size:28px;font-weight:700;color:var(--rose);letter-spacing:6px;}
+.code-box .hint{font-size:11px;color:var(--s400);margin-top:4px;}
+.hint-text{font-size:10px;color:var(--s400);margin-top:-8px;margin-bottom:12px;}
+.loading{display:none;text-align:center;padding:40px;font-size:14px;color:var(--s500);}
+.loading.show{display:block;}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
+.pet-entry{background:var(--card);border:1.5px solid var(--s200);border-radius:14px;padding:14px;margin-bottom:12px;}
+.pet-entry-header{font-size:13px;font-weight:800;color:var(--teal-d);margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.pet-entry .form-input,.pet-entry .form-select{margin-bottom:8px;}
+</style>
+</head>
+<body>
+
+<!-- ===== Step 1: オーナー＆ペット情報 ===== -->
+<div id="step1">
+  <div class="header">
+    <h1>📝 ペット登録</h1>
+    <p>ステップ 1/3</p>
+  </div>
+  <div class="progress"><div class="dot active"></div><div class="dot"></div><div class="dot"></div></div>
+  <div class="section">
+    <label class="form-label">👤 あなたのお名前</label>
+    <input class="form-input" id="ownerName" placeholder="例：田中太郎">
+    <div class="hint-text">💡 家族に表示される名前です</div>
+
+    <label class="form-label">🔢 何匹飼っていますか？</label>
+    <div class="choice-grid" id="countGrid">
+      <div class="choice-btn selected" onclick="selectCount(this,1)">1匹</div>
+      <div class="choice-btn" onclick="selectCount(this,2)">2匹</div>
+      <div class="choice-btn" onclick="selectCount(this,3)">3匹</div>
+      <div class="choice-btn" onclick="selectCount(this,4)">4匹+</div>
+    </div>
+
+    <div id="petEntriesContainer"></div>
+
+    <button class="btn btn-primary" onclick="goStep2()">次へ →</button>
+  </div>
+</div>
+
+<!-- ===== Step 2: 地域選択 ===== -->
+<div id="step2" style="display:none;">
+  <div class="header">
+    <h1>📍 地域設定</h1>
+    <p>ステップ 2/3</p>
+  </div>
+  <div class="progress"><div class="dot active"></div><div class="dot active"></div><div class="dot"></div></div>
+  <div class="section">
+    <label class="form-label">📍 都道府県</label>
+    <select class="form-select" id="area" onchange="onAreaChange()">
+      <option value="">選択してください</option>
+      <option>北海道</option><option>東京都</option><option>神奈川県</option>
+      <option>大阪府</option><option>愛知県</option><option>福岡県</option>
+      <option>その他</option>
+    </select>
+
+    <div id="detailGroup" style="display:none;">
+      <label class="form-label">🏠 市区町村</label>
+      <select class="form-select" id="areaDetail">
+        <option value="">選択</option>
+      </select>
+    </div>
+
+    <div style="margin-top:8px;padding-top:16px;border-top:1px solid var(--s200);">
+      <label class="form-label">🎁 紹介コード（任意）</label>
+      <input class="form-input" id="referralInput" placeholder="例：R-A3K7M2" style="text-transform:uppercase;letter-spacing:2px;font-family:monospace;font-size:16px;">
+      <div class="hint-text">💡 友だちからコードをもらった方はここに入力してください</div>
+    </div>
+
+    <button class="btn btn-primary" onclick="goStep3()">次へ →</button>
+    <button class="btn btn-outline" onclick="show('step1');hide('step2')">← 戻る</button>
+  </div>
+</div>
+
+<!-- ===== Step 3: 確認 ===== -->
+<div id="step3" style="display:none;">
+  <div class="header">
+    <h1>✅ 確認</h1>
+    <p>ステップ 3/3</p>
+  </div>
+  <div class="progress"><div class="dot active"></div><div class="dot active"></div><div class="dot active"></div></div>
+  <div class="section">
+    <div class="card" id="confirmCard"></div>
+    <button class="btn btn-primary" onclick="submitRegister()">✅ この内容で登録する</button>
+    <button class="btn btn-outline" onclick="show('step1');hide('step3')">✏️ 修正する</button>
+  </div>
+</div>
+
+<!-- ===== Loading ===== -->
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">⏳</div>
+  <div>登録中...</div>
+</div>
+
+<!-- ===== Step 4: 完了 ===== -->
+<div id="step4" style="display:none;">
+  <div class="done">
+    <div class="icon">🎉</div>
+    <h2>登録完了！</h2>
+    <p id="doneMsg"></p>
+  </div>
+  <div class="section" style="padding-top:0;">
+    <div class="code-box">
+      <div style="font-size:11px;color:var(--rose);font-weight:700;">あなたの家族コード</div>
+      <div class="code" id="familyCodeDisplay"></div>
+      <div class="hint">このコードを家族にシェアしてください</div>
+    </div>
+    <div class="info">💡 家族がこのコードを入力すると<br>毎日の元気通知が届きます！</div>
+    <div id="referralCodeArea" style="display:none;margin-top:12px;">
+      <div style="background:var(--teal-l);border:1.5px dashed var(--teal);border-radius:16px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--teal-d);font-weight:700;">🎁 あなたの紹介コード</div>
+        <div id="referralCodeDisplay" style="font-family:monospace;font-size:22px;font-weight:700;color:var(--teal-d);letter-spacing:4px;margin:6px 0;"></div>
+        <div style="font-size:10px;color:var(--s400);">友だちに共有すると家族メンバー枠が+1！</div>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="closeLiff()">🐾 さっそくチェック！</button>
+  </div>
+</div>
+
+<div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../config.js"></script>
+<script>
+var GAS_URL = PAWBON_CONFIG.GAS_URL;
+var petCount = 1;
+var lineId = '';
+
+var breedOptions = {
+  dog: ['柴犬','トイプードル','チワワ','ゴールデンレトリバー','フレンチブルドッグ','ミニチュアダックス','ポメラニアン','コーギー','MIX','その他'],
+  cat: ['スコティッシュフォールド','マンチカン','アメリカンショートヘア','ラグドール','MIX','その他'],
+  other: ['うさぎ','ハムスター','フェレット','鳥','その他']
+};
+
+var areas = {
+  '北海道':['札幌市','旭川市','函館市','その他'],
+  '東京都':['世田谷区','渋谷区','目黒区','港区','新宿区','品川区','杉並区','練馬区','その他'],
+  '神奈川県':['横浜市','川崎市','藤沢市','鎌倉市','その他'],
+  '大阪府':['大阪市','堺市','豊中市','その他'],
+  '愛知県':['名古屋市','豊田市','その他'],
+  '福岡県':['福岡市','北九州市','その他']
+};
+
+// ═══ LIFF ═══
+async function initLiff() {
+  try {
+    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.register });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    var profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) {
+    lineId = 'debug_user_' + Date.now();
+  }
+}
+initLiff();
+
+// ═══ UI ═══
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+// ═══ 数量選択 → ペット入力欄生成 ═══
+function selectCount(el, n) {
+  document.querySelectorAll('#countGrid .choice-btn').forEach(function(b){ b.classList.remove('selected'); });
+  el.classList.add('selected');
+  petCount = n;
+  renderPetEntries();
+}
+
+function renderPetEntries() {
+  var container = document.getElementById('petEntriesContainer');
+  // 既存入力を保存
+  var saved = [];
+  for (var k = 0; k < 10; k++) {
+    var nameEl = document.getElementById('petName_' + k);
+    if (!nameEl) break;
+    var breedEl = document.getElementById('breed_' + k);
+    saved.push({ name: nameEl.value, breed: breedEl ? breedEl.value : '' });
+  }
+
+  var html = '';
+  for (var i = 0; i < petCount; i++) {
+    var prevName = saved[i] ? saved[i].name : '';
+    html += '<div class="pet-entry">';
+    html += '<div class="pet-entry-header">🐾 ペット ' + (i + 1) + '</div>';
+    html += '<label class="form-label">お名前</label>';
+    html += '<input class="form-input" id="petName_' + i + '" placeholder="例：チョコ" value="' + escapeAttr(prevName) + '">';
+    html += '<label class="form-label">種類</label>';
+    html += '<div class="choice-grid" id="speciesGrid_' + i + '">';
+    html += '<div class="choice-btn" onclick="selectSpecies(' + i + ',this,\'dog\')">🐕 犬</div>';
+    html += '<div class="choice-btn" onclick="selectSpecies(' + i + ',this,\'cat\')">🐈 猫</div>';
+    html += '<div class="choice-btn" onclick="selectSpecies(' + i + ',this,\'other\')">🐾 その他</div>';
+    html += '</div>';
+    html += '<div id="breedGroup_' + i + '" style="display:none;">';
+    html += '<label class="form-label">品種</label>';
+    html += '<select class="form-select" id="breed_' + i + '"><option value="">選択してください</option></select>';
+    html += '</div>';
+    html += '</div>';
+  }
+  container.innerHTML = html;
+
+  // 復元：既存品種があれば種類も復元
+  for (var j = 0; j < petCount; j++) {
+    if (saved[j] && saved[j].breed) {
+      var sp = guessSpecies(saved[j].breed);
+      if (sp) {
+        highlightSpeciesBtn(j, sp);
+        populateBreedSelect(j, sp, saved[j].breed);
+      }
+    }
+  }
+}
+
+function selectSpecies(idx, el, type) {
+  document.querySelectorAll('#speciesGrid_' + idx + ' .choice-btn').forEach(function(b){ b.classList.remove('selected'); });
+  el.classList.add('selected');
+  populateBreedSelect(idx, type, '');
+}
+
+function highlightSpeciesBtn(idx, type) {
+  var map = { dog: '犬', cat: '猫', other: 'その他' };
+  document.querySelectorAll('#speciesGrid_' + idx + ' .choice-btn').forEach(function(b) {
+    if (b.textContent.indexOf(map[type]) !== -1) b.classList.add('selected');
+  });
+}
+
+function populateBreedSelect(idx, type, current) {
+  var sel = document.getElementById('breed_' + idx);
+  sel.innerHTML = '<option value="">選択してください</option>';
+  (breedOptions[type] || []).forEach(function(o) {
+    sel.innerHTML += '<option' + (o === current ? ' selected' : '') + '>' + o + '</option>';
+  });
+  document.getElementById('breedGroup_' + idx).style.display = 'block';
+}
+
+function guessSpecies(breed) {
+  if (breedOptions.dog.indexOf(breed) !== -1) return 'dog';
+  if (breedOptions.cat.indexOf(breed) !== -1) return 'cat';
+  if (breedOptions.other.indexOf(breed) !== -1) return 'other';
+  return '';
+}
+
+// ═══ 地域連動 ═══
+function onAreaChange() {
+  var area = document.getElementById('area').value;
+  var sel = document.getElementById('areaDetail');
+  var group = document.getElementById('detailGroup');
+  if (!area || !areas[area]) { group.style.display = 'none'; return; }
+  sel.innerHTML = '<option value="">選択</option>';
+  areas[area].forEach(function(a) { sel.innerHTML += '<option>' + a + '</option>'; });
+  group.style.display = 'block';
+}
+
+// ═══ ペット情報収集 ═══
+function collectPetData() {
+  var names = [];
+  var breeds = [];
+  for (var i = 0; i < petCount; i++) {
+    var name = document.getElementById('petName_' + i).value.trim();
+    if (!name) return { error: 'ペット ' + (i + 1) + ' の名前を入力してください' };
+    names.push(name);
+    var breedEl = document.getElementById('breed_' + i);
+    breeds.push(breedEl ? breedEl.value || '' : '');
+  }
+  return { names: names, breeds: breeds };
+}
+
+// ═══ ステップ遷移 ═══
+function goStep2() {
+  var ownerName = document.getElementById('ownerName').value.trim();
+  if (!ownerName) { alert('お名前を入力してください'); return; }
+  var petData = collectPetData();
+  if (petData.error) { alert(petData.error); return; }
+  hide('step1'); show('step2');
+}
+
+function goStep3() {
+  var area = document.getElementById('area').value;
+  if (!area) { alert('地域を選択してください'); return; }
+
+  var ownerName = document.getElementById('ownerName').value.trim();
+  var petData = collectPetData();
+  var detail = document.getElementById('areaDetail').value || '';
+  var refEl = document.getElementById('referralInput');
+  var referralCode = refEl ? (refEl.value || '').trim().toUpperCase() : '';
+
+  // 確認画面
+  var petListHtml = '';
+  for (var i = 0; i < petData.names.length; i++) {
+    var breedStr = petData.breeds[i] || '未選択';
+    petListHtml += '<div class="data-row"><span class="label">🐾 ペット ' + (i + 1) + '</span><span class="value">' + escapeHtml(petData.names[i]) + '（' + escapeHtml(breedStr) + '）</span></div>';
+  }
+
+  document.getElementById('confirmCard').innerHTML =
+    '<div class="data-row"><span class="label">👤 お名前</span><span class="value">' + escapeHtml(ownerName) + '</span></div>' +
+    '<div class="data-row"><span class="label">🔢 頭数</span><span class="value">' + petCount + '匹</span></div>' +
+    petListHtml +
+    '<div class="data-row"><span class="label">📍 地域</span><span class="value">' + escapeHtml(area + ' ' + detail) + '</span></div>' +
+    (referralCode ? '<div class="data-row"><span class="label">🎁 紹介コード</span><span class="value" style="color:var(--teal-d);">' + escapeHtml(referralCode) + '</span></div>' : '');
+
+  hide('step2'); show('step3');
+}
+
+// ═══ 登録送信 ═══
+async function submitRegister() {
+  hide('step3');
+  document.getElementById('loading').classList.add('show');
+
+  var petData = collectPetData();
+  var refEl = document.getElementById('referralInput');
+  var referralCode = refEl ? (refEl.value || '').trim().toUpperCase() : '';
+  var payload = {
+    action: 'register',
+    lineId: lineId,
+    ownerName: document.getElementById('ownerName').value.trim(),
+    petNames: petData.names.join(', '),
+    breeds: petData.breeds.join(', '),
+    petCount: petCount,
+    area: document.getElementById('area').value,
+    areaDetail: document.getElementById('areaDetail').value || '',
+    referralCode: referralCode || ''
+  };
+
+  try {
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      body: JSON.stringify(payload)
+    }).catch(function(){});
+
+    await new Promise(function(r){ setTimeout(r, 6000); });
+
+    var supaUrl = PAWBON_CONFIG.SUPABASE_URL + '/rest/v1/pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1';
+    var supaRes = await fetch(supaUrl, {
+      headers: {
+        'apikey': PAWBON_CONFIG.SUPABASE_KEY,
+        'Authorization': 'Bearer ' + PAWBON_CONFIG.SUPABASE_KEY
+      }
+    });
+    var families = await supaRes.json();
+
+    document.getElementById('loading').classList.remove('show');
+
+    if (families && families.length > 0) {
+      document.getElementById('familyCodeDisplay').textContent = families[0].family_code;
+      document.getElementById('doneMsg').textContent = petData.names.join('、') + 'の情報を保存しました';
+      // 紹介コード表示
+      var refCode = families[0].referral_code || '';
+      if (refCode) {
+        document.getElementById('referralCodeArea').style.display = 'block';
+        document.getElementById('referralCodeDisplay').textContent = refCode;
+      }
+      show('step4');
+    } else {
+      alert('登録処理に時間がかかっています。少し待ってからもう一度お試しください。');
+      show('step3');
+    }
+  } catch (e) {
+    document.getElementById('loading').classList.remove('show');
+    alert('エラー: ' + e.message);
+    show('step3');
+  }
+}
+
+function closeLiff() {
+  if (liff.isInClient()) { liff.closeWindow(); }
+  else { window.close(); }
+}
+
+// ═══ Util ═══
+function escapeAttr(s) {
+  return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// 初期表示：1匹分の入力欄を生成
+renderPetEntries();
+</script>
+</body>
+</html>
