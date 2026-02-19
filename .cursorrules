@@ -1,0 +1,14 @@
+# PawBon Project Rules / PawBon 项目规则
+
+## Tech Stack / 技术栈
+- Backend: Supabase Edge Functions (Deno/TypeScript)
+- Frontend: LIFF (vanilla HTML/JS), LINE LIFF SDK
+- Database: Supabase PostgreSQL
+- Platform: LINE Messaging API
+
+## Coding Conventions / 编码规范
+- Edge Functions: TypeScript (Deno runtime)
+- LIFF pages: vanilla JS (no framework / 无框架)
+- Variables/functions: English camelCase / 变量和函数名用英文驼峰
+- DB columns: snake_case / 数据库字段用下划线命名
+- Timezone: JST (Asia/Tokyo) / 时区：日本标准时间

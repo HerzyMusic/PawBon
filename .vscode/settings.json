@@ -1,0 +1,7 @@
+{
+  "deno.enable": false,
+  "deno.enablePaths": ["./supabase/functions"],
+  "deno.unstable": ["bare-node-builtins"],
+  "files.associations": { "*.gs": "javascript" },
+  "editor.formatOnSave": true
+}

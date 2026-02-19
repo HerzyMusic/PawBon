@@ -1,18 +1,18 @@
-# 環境変数（絶対にコミットしない！）
+# 環境変数（絶対にコミットしない！）/ 环境变量（绝对不能提交！）
 .env
 .env.local
 .env.*.local
 
-# Supabase
+# Supabase 一時ファイル / 临时文件
 supabase/.temp/
 supabase/.branches/
 
-# OS
+# OS 自動生成ファイル / 系统自动生成的文件
 .DS_Store
 Thumbs.db
 
-# IDE
+# IDE 設定 / IDE 配置
 .cursor/
 
-# Node
+# npm 依存パッケージ / npm 依赖包（体積が大きい / 体积大）
 node_modules/
