@@ -158,9 +158,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-var GAS_URL = PAWBON_CONFIG.GAS_URL;
-var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
-var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var API_BASE = PAWBON_CONFIG.API_BASE;
 var lineId = '';
 var familyCode = '';
 var family = null;
@@ -169,25 +167,7 @@ var petNames = [];
 var petBreeds = [];
 var worriedPets = {};
 
-function supaGet(path) {
-  return fetch(SUPA_URL + '/rest/v1/' + path, {
-    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-  }).then(function(r){ return r.json(); });
-}
 function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-function getDate(r) { return r.checkin_date || r.check_date || r.date || ''; }
-
-// ═══ 今日のチェック記録を取得 ═══
-async function getTodayCheckins(code, reporterId) {
-  var today = new Date().toISOString().substring(0, 10);
-  var q = 'checkins?family_code=eq.' + encodeURIComponent(code);
-  if (reporterId) q += '&reporter_line_id=eq.' + encodeURIComponent(reporterId);
-  var result = [];
-  try { result = await supaGet(q + '&checkin_date=eq.' + today + '&limit=5'); } catch(e) {}
-  if (Array.isArray(result) && result.length > 0) return result;
-  try { result = await supaGet(q + '&check_date=eq.' + today + '&limit=5'); } catch(e) {}
-  return Array.isArray(result) ? result : [];
-}
 
 // ═══ LIFF ═══
 async function initLiff() {
@@ -197,48 +177,49 @@ async function initLiff() {
     var profile = await liff.getProfile();
     lineId = profile.userId;
   } catch (e) {
-    try {
-      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
-      if (latest && latest.length > 0) lineId = latest[0].owner_line_id;
-    } catch (e2) {}
+    lineId = 'debug_user_' + Date.now();
   }
   if (lineId) loadUserData();
 }
 initLiff();
 
-// ═══ Load ═══
+// ═══ Load（Edge Function 経由） ═══
 async function loadUserData() {
   try {
-    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
+    var res = await fetch(API_BASE + '/api-user-data?lineId=' + encodeURIComponent(lineId));
+    var json = await res.json();
+    var data = json.data || {};
 
-    if (Array.isArray(families) && families.length > 0) {
-      family = families[0];
-      role = 'owner';
-    } else {
-      var members = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
-      if (Array.isArray(members) && members.length > 0) {
-        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(members[0].family_code) + '&limit=1');
-        if (Array.isArray(fam) && fam.length > 0) {
-          family = fam[0];
-          role = (family.owner_line_id === lineId) ? 'owner' : 'member';
-        }
-      }
-    }
-
-    if (!family) {
+    if (!data.registered && !data.familyCode) {
       document.getElementById('initLoading').innerHTML =
         '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録をしてください。</div>';
       return;
     }
 
-    familyCode = family.family_code;
-    petNames = family.pet_names.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-    petBreeds = (family.breeds || '').split(',').map(function(s){ return s.trim(); });
+    role = data.role;
+    familyCode = data.familyCode;
+    petNames = (data.petNames || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    petBreeds = (data.breeds || '').split(',').map(function(s){ return s.trim(); });
+
+    // family オブジェクトを構築（owner_line_id を familyMembers から取得）
+    var ownerLineId = '';
+    if (data.familyMembers) {
+      data.familyMembers.forEach(function(m) {
+        if (m.relation === 'オーナー') ownerLineId = m.member_line_id;
+      });
+    }
+    family = {
+      family_code: data.familyCode,
+      pet_names: data.petNames,
+      breeds: data.breeds,
+      owner_line_id: ownerLineId,
+      owner_name: ''
+    };
 
     if (role === 'owner') {
-      await handleOwnerFlow();
+      await handleOwnerFlow(data.checkedInToday);
     } else {
-      await handleMemberFlow();
+      await handleMemberFlow(data.checkedInToday);
     }
   } catch (e) {
     document.getElementById('initLoading').innerHTML =
@@ -247,11 +228,10 @@ async function loadUserData() {
 }
 
 // ═══ オーナー ═══
-async function handleOwnerFlow() {
-  var todayCheckins = await getTodayCheckins(familyCode, lineId);
+async function handleOwnerFlow(checkedInToday) {
   document.getElementById('initLoading').style.display = 'none';
 
-  if (todayCheckins.length > 0) {
+  if (checkedInToday) {
     // 既にチェック済み
     document.getElementById('main').style.display = 'block';
     document.getElementById('petList').innerHTML =
@@ -265,12 +245,19 @@ async function handleOwnerFlow() {
 }
 
 // ═══ メンバー ═══
-async function handleMemberFlow() {
-  var todayCheckins = await getTodayCheckins(familyCode, null);
+async function handleMemberFlow(checkedInToday) {
   document.getElementById('initLoading').style.display = 'none';
 
-  if (todayCheckins.length > 0) {
-    showTodayResult(todayCheckins[0]);
+  if (checkedInToday) {
+    // チェック済み → 結果は直接表示できないのでメッセージを表示
+    document.getElementById('viewResult').style.display = 'block';
+    document.getElementById('resultSub').textContent = petNames.join('、');
+    document.getElementById('resultCard').innerHTML =
+      '<div class="result-card genki">' +
+        '<div class="big-icon">✅</div>' +
+        '<div class="title">今日のチェック済み</div>' +
+        '<div class="sub">🐾 ' + escapeHtml(petNames.join('、')) + '<br>今日の元気チェックは記録済みです</div>' +
+      '</div>';
   } else {
     showMemberReminder();
   }
@@ -320,17 +307,16 @@ function showMemberReminder() {
 
 async function sendReminder(ownerName) {
   try {
-    await fetch(GAS_URL, {
+    await fetch(API_BASE + '/api-reminder', {
       method: 'POST',
-      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'checkinReminder',
         familyCode: familyCode,
         ownerLineId: family.owner_line_id,
         senderLineId: lineId,
         petNames: petNames.join('、')
       })
-    }).catch(function(){});
+    });
 
     document.getElementById('reminderTitle').textContent =
       '📨 ' + ownerName + ' に\nリマインドを送りました！';
@@ -393,21 +379,21 @@ async function submitWorry() {
   var memo = document.getElementById('memo').value.trim();
 
   try {
-    await fetch(GAS_URL, {
-      method: 'POST', mode: 'no-cors',
+    var res = await fetch(API_BASE + '/api-worry', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'checkinWorry', lineId: lineId, familyCode: familyCode,
+        lineId: lineId,
         worriedPets: wNames.join(', '), symptoms: symptoms.join(', '), memo: memo
       })
-    }).catch(function(){});
-
-    await new Promise(function(r){ setTimeout(r, 3000); });
-    var check = await getTodayCheckins(familyCode, lineId);
+    });
+    var result = await res.json();
     document.getElementById('loading').classList.remove('show');
 
-    document.getElementById('doneMsg').textContent = check.length > 0
+    var errMsg = result.error ? result.error.message : '';
+    document.getElementById('doneMsg').textContent = result.success
       ? '⚠️ ' + wNames.join('・') + 'の心配を記録しました。\n家族にも状況を伝えました。'
-      : '⚠️ ' + wNames.join('・') + 'の心配を送信しました。\n反映に少し時間がかかる場合があります。';
+      : '⚠️ ' + wNames.join('・') + 'の心配を送信しました。\n' + (errMsg || '反映に少し時間がかかる場合があります。');
     document.getElementById('done').style.display = 'block';
   } catch(e) {
     document.getElementById('loading').classList.remove('show');

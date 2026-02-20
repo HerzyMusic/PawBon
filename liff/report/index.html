@@ -108,18 +108,11 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
-var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var API_BASE = PAWBON_CONFIG.API_BASE;
 var lineId = '';
 var familyCode = '';
 var allRecords = [];
 var currentYear, currentMonth;
-
-function supaGet(path) {
-  return fetch(SUPA_URL + '/rest/v1/' + path, {
-    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-  }).then(function(r){ return r.json(); });
-}
 
 // ═══ LIFF ═══
 async function initLiff() {
@@ -129,10 +122,7 @@ async function initLiff() {
     var profile = await liff.getProfile();
     lineId = profile.userId;
   } catch (e) {
-    try {
-      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
-      if (latest && latest.length > 0) lineId = latest[0].owner_line_id;
-    } catch (e2) {}
+    lineId = 'debug_user_' + Date.now();
   }
   loadReport();
 }
@@ -140,94 +130,33 @@ initLiff();
 
 // ═══ Helper: レコードから日付を取得 ═══
 function getDate(r) {
-  return r.checkin_date || r.check_date || r.date || '';
+  return r.date || r.checkin_date || r.check_date || '';
 }
 
-// ═══ Load ═══
+// ═══ Load（Edge Function 経由） ═══
 async function loadReport() {
   try {
-    // 1. 家族を特定
-    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
-    var family = null;
+    var res = await fetch(API_BASE + '/api-report?lineId=' + encodeURIComponent(lineId));
+    var json = await res.json();
 
-    if (families && families.length > 0) {
-      family = families[0];
-    } else {
-      var members = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
-      if (members && members.length > 0) {
-        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(members[0].family_code) + '&limit=1');
-        if (fam && fam.length > 0) family = fam[0];
-      }
-    }
-
-    if (!family) {
+    if (!json.success) {
       document.getElementById('loading').innerHTML =
         '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
       return;
     }
 
-    familyCode = family.family_code;
+    var data = json.data || {};
+    familyCode = data.familyCode;
+    allRecords = data.records || [];
 
-    // 2. 全チェックイン記録を取得（order フォールバック付き）
-    var rawRecords;
-    try {
-      rawRecords = await supaGet(
-        'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
-        '&order=checkin_date.desc&limit=365'
-      );
-    } catch(e1) { rawRecords = null; }
-
-    if (!Array.isArray(rawRecords)) {
-      try {
-        rawRecords = await supaGet(
-          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
-          '&order=check_date.desc&limit=365'
-        );
-      } catch(e2) { rawRecords = null; }
-    }
-
-    if (!Array.isArray(rawRecords)) {
-      try {
-        rawRecords = await supaGet(
-          'checkins?family_code=eq.' + encodeURIComponent(familyCode) +
-          '&order=id.desc&limit=365'
-        );
-      } catch(e3) { rawRecords = []; }
-    }
-
-    allRecords = Array.isArray(rawRecords) ? rawRecords : [];
-
-    // JS側で日付降順ソート
+    // 日付降順ソート
     allRecords.sort(function(a, b) {
       return getDate(b).localeCompare(getDate(a));
     });
 
-    // 3. 同地域の今日の元気数（概算）
-    var today = new Date().toISOString().substring(0, 10);
-    var regionCheckins = [];
-    try {
-      var rawRegion = await supaGet(
-        'checkins?checkin_date=eq.' + today + '&status=eq.genki&limit=100'
-      );
-      regionCheckins = Array.isArray(rawRegion) ? rawRegion : [];
-    } catch(e3) {
-      try {
-        var rawRegion2 = await supaGet(
-          'checkins?check_date=eq.' + today + '&status=eq.genki&limit=100'
-        );
-        regionCheckins = Array.isArray(rawRegion2) ? rawRegion2 : [];
-      } catch(e4) {}
-    }
-
-    // 4. 統計計算
-    var totalDays = allRecords.length;
-    var genkiDays = allRecords.filter(function(r){ return r.status === 'genki'; }).length;
-    var healthRate = totalDays > 0 ? Math.round((genkiDays / totalDays) * 100) : 0;
-    var streak = calcStreak(allRecords);
-
-    // 5. レンダリング
-    var petNames = family.pet_names.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-    var petBreeds = (family.breeds || '').split(',').map(function(s){ return s.trim(); });
+    // レンダリング
+    var petNames = (data.petNames || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+    var petBreeds = (data.breeds || '').split(',').map(function(s){ return s.trim(); });
 
     document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
 
@@ -237,11 +166,11 @@ async function loadReport() {
       return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
     }).join('');
 
-    document.getElementById('totalDays').textContent = totalDays;
-    document.getElementById('streak').textContent = streak;
-    document.getElementById('healthRate').textContent = healthRate + '%';
-    document.getElementById('regionCount').textContent = regionCheckins.length || '—';
-    document.getElementById('regionArea').textContent = family.area + ' ' + (family.area_detail || '');
+    document.getElementById('totalDays').textContent = data.totalDays || 0;
+    document.getElementById('streak').textContent = data.streak || 0;
+    document.getElementById('healthRate').textContent = (data.healthRate || 0) + '%';
+    document.getElementById('regionCount').textContent = data.regionCount || '—';
+    document.getElementById('regionArea').textContent = (data.area || '') + ' ' + (data.areaDetail || '');
 
     var now = new Date();
     currentYear = now.getFullYear();
@@ -257,43 +186,6 @@ async function loadReport() {
     document.getElementById('loading').innerHTML =
       '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
   }
-}
-
-// ═══ 連続日数計算 ═══
-function calcStreak(records) {
-  if (!records || records.length === 0) return 0;
-
-  var dates = records.map(function(r){ return getDate(r); }).filter(Boolean).sort().reverse();
-
-  var today = new Date();
-  var streak = 0;
-  var checkDate = new Date(today);
-
-  var todayStr = formatDate(today);
-  if (dates.indexOf(todayStr) === -1) {
-    checkDate.setDate(checkDate.getDate() - 1);
-  }
-
-  var dateSet = {};
-  dates.forEach(function(d){ dateSet[d] = true; });
-
-  for (var i = 0; i < 365; i++) {
-    var ds = formatDate(checkDate);
-    if (dateSet[ds]) {
-      streak++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    } else {
-      break;
-    }
-  }
-  return streak;
-}
-
-function formatDate(d) {
-  var y = d.getFullYear();
-  var m = String(d.getMonth() + 1).padStart(2, '0');
-  var day = String(d.getDate()).padStart(2, '0');
-  return y + '-' + m + '-' + day;
 }
 
 // ═══ Calendar ═══
@@ -358,7 +250,7 @@ function renderHistory() {
     if (r.status === 'genki') {
       return '<div class="record-row"><span class="date">' + label + '</span><span class="status-g">✅ 全員元気</span></div>';
     } else {
-      var detail = escapeHtml(r.worried_pets || '心配');
+      var detail = escapeHtml(r.worriedPets || r.worried_pets || '心配');
       if (r.symptoms) detail += '（' + escapeHtml(r.symptoms) + '）';
       return '<div class="record-row"><span class="date">' + label + '</span><span class="status-w">⚠️ ' + detail + '</span></div>';
     }

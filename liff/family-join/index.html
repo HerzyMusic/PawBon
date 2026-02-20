@@ -175,33 +175,12 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-var GAS_URL = PAWBON_CONFIG.GAS_URL;
-var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
-var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var API_BASE = PAWBON_CONFIG.API_BASE;
 
 var lineId = '';
 var displayName = '';
 var selectedRelation = '';
 var foundFamily = null;
-
-function supaGet(path) {
-  return fetch(SUPA_URL + '/rest/v1/' + path, {
-    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-  }).then(function(r){ return r.json(); });
-}
-
-function supaInsert(table, data) {
-  return fetch(SUPA_URL + '/rest/v1/' + table, {
-    method: 'POST',
-    headers: {
-      'apikey': SUPA_KEY,
-      'Authorization': 'Bearer ' + SUPA_KEY,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    },
-    body: JSON.stringify(data)
-  });
-}
 
 // ═══ LIFF ═══
 async function initLiff() {
@@ -252,7 +231,7 @@ codeInput.addEventListener('keydown', function(e) {
   if (e.key === 'Enter' && len >= 4 && len <= 6) verifyCode();
 });
 
-// ═══ STEP 1 → コード検証（Supabase直接） ═══
+// ═══ STEP 1 → コード検証（Edge Function 経由） ═══
 async function verifyCode() {
   var rawCode = codeInput.value.trim().toUpperCase();
   var code = 'P-' + rawCode;
@@ -263,48 +242,33 @@ async function verifyCode() {
   document.getElementById('loading').classList.add('show');
 
   try {
-    // 1. Supabase でコード検索
-    var families = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(code) + '&limit=1');
+    var res = await fetch(API_BASE + '/api-family-join?code=' + encodeURIComponent(code) + '&lineId=' + encodeURIComponent(lineId));
+    var result = await res.json();
 
     document.getElementById('loading').classList.remove('show');
 
-    if (!families || families.length === 0) {
+    // Edge Function がエラーを返した場合
+    if (!result.success) {
       show('step1');
       codeInput.classList.add('error');
       var errEl = document.getElementById('codeError');
-      errEl.textContent = '❌ コード「' + code + '」は見つかりませんでした';
+      var errCode = result.error ? result.error.code : '';
+      var errMsg = result.error ? result.error.message : '';
+      if (errCode === 'code_not_found' || errCode === 'no_code') {
+        errEl.textContent = '❌ コード「' + code + '」は見つかりませんでした';
+      } else if (errCode === 'own_code') {
+        errEl.textContent = 'ℹ️ これはあなた自身の家族コードです';
+      } else if (errCode === 'already_member') {
+        errEl.textContent = 'ℹ️ 既にこの家族に登録されています';
+      } else {
+        errEl.textContent = '❌ ' + (errMsg || errCode);
+      }
       errEl.classList.add('show');
       return;
     }
 
-    var family = families[0];
-
-    // 2. 自分のコードかチェック
-    if (family.owner_line_id === lineId) {
-      show('step1');
-      codeInput.classList.add('error');
-      var errEl2 = document.getElementById('codeError');
-      errEl2.textContent = 'ℹ️ これはあなた自身の家族コードです';
-      errEl2.classList.add('show');
-      return;
-    }
-
-    // 3. 既に登録済みかチェック
-    var existing = await supaGet(
-      'family_members?family_code=eq.' + encodeURIComponent(code) +
-      '&member_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1'
-    );
-    if (existing && existing.length > 0) {
-      show('step1');
-      codeInput.classList.add('error');
-      var errEl3 = document.getElementById('codeError');
-      errEl3.textContent = 'ℹ️ 既にこの家族に登録されています';
-      errEl3.classList.add('show');
-      return;
-    }
-
-    // 4. 成功 → Step 2
-    foundFamily = family;
+    // 成功 → Step 2
+    foundFamily = result.data;
     renderFoundFamily();
     document.getElementById('joinDisplayName').value = displayName;
     show('step2');
@@ -313,16 +277,16 @@ async function verifyCode() {
     document.getElementById('loading').classList.remove('show');
     show('step1');
     codeInput.classList.add('error');
-    var errEl4 = document.getElementById('codeError');
-    errEl4.textContent = '❌ 通信エラー: ' + e.message;
-    errEl4.classList.add('show');
+    var errEl2 = document.getElementById('codeError');
+    errEl2.textContent = '❌ 通信エラー: ' + e.message;
+    errEl2.classList.add('show');
   }
 }
 
 function renderFoundFamily() {
   var names = foundFamily.pet_names;
   var count = foundFamily.pet_count || names.split(',').length;
-  var area = (foundFamily.area || '') + ' ' + (foundFamily.area_detail || '');
+  var area = (foundFamily.area || '') + ' ' + (foundFamily.area_detail || foundFamily.areaDetail || '');
   document.getElementById('foundEmoji').textContent = count > 2 ? '🐕🐈🐾' : count > 1 ? '🐕🐈' : '🐕';
   document.getElementById('foundName').textContent = '🐾 ' + names;
   document.getElementById('foundSub').textContent = '📍 ' + area.trim() + ' · ' + count + '匹';
@@ -347,31 +311,22 @@ async function submitJoin() {
   document.getElementById('loading').classList.add('show');
 
   try {
-    // 1. Supabase に直接 INSERT
-    var res = await supaInsert('family_members', {
-      family_code: foundFamily.family_code,
-      member_line_id: lineId,
-      relation: selectedRelation,
-      display_name: joinName
-    });
-
-    if (!res.ok) {
-      var errText = await res.text();
-      throw new Error(errText);
-    }
-
-    // 2. GAS にも通知（LINE通知送信用、失敗しても問題なし）
-    fetch(GAS_URL, {
+    var res = await fetch(API_BASE + '/api-family-join', {
       method: 'POST',
-      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'joinFamily',
         lineId: lineId,
         familyCode: foundFamily.family_code,
         relation: selectedRelation,
         displayName: joinName
       })
-    }).catch(function(){});
+    });
+    var result = await res.json();
+
+    if (!result.success) {
+      var err = result.error || {};
+      throw new Error(err.message || err.code || '登録に失敗しました');
+    }
 
     document.getElementById('loading').classList.remove('show');
 

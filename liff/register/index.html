@@ -160,7 +160,7 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-var GAS_URL = PAWBON_CONFIG.GAS_URL;
+var API_BASE = PAWBON_CONFIG.API_BASE;
 var petCount = 1;
 var lineId = '';
 
@@ -359,37 +359,29 @@ async function submitRegister() {
   };
 
   try {
-    await fetch(GAS_URL, {
+    var res = await fetch(API_BASE + '/api-register', {
       method: 'POST',
-      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).catch(function(){});
-
-    await new Promise(function(r){ setTimeout(r, 6000); });
-
-    var supaUrl = PAWBON_CONFIG.SUPABASE_URL + '/rest/v1/pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1';
-    var supaRes = await fetch(supaUrl, {
-      headers: {
-        'apikey': PAWBON_CONFIG.SUPABASE_KEY,
-        'Authorization': 'Bearer ' + PAWBON_CONFIG.SUPABASE_KEY
-      }
     });
-    var families = await supaRes.json();
+    var result = await res.json();
 
     document.getElementById('loading').classList.remove('show');
 
-    if (families && families.length > 0) {
-      document.getElementById('familyCodeDisplay').textContent = families[0].family_code;
+    if (result.success) {
+      var d = result.data || {};
+      document.getElementById('familyCodeDisplay').textContent = d.familyCode;
       document.getElementById('doneMsg').textContent = petData.names.join('、') + 'の情報を保存しました';
       // 紹介コード表示
-      var refCode = families[0].referral_code || '';
+      var refCode = d.referralCode || '';
       if (refCode) {
         document.getElementById('referralCodeArea').style.display = 'block';
         document.getElementById('referralCodeDisplay').textContent = refCode;
       }
       show('step4');
     } else {
-      alert('登録処理に時間がかかっています。少し待ってからもう一度お試しください。');
+      var err = result.error || {};
+      alert('登録エラー: ' + (err.message || '不明なエラー'));
       show('step3');
     }
   } catch (e) {

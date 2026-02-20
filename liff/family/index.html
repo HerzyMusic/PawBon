@@ -432,20 +432,13 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
-var SUPA_URL = PAWBON_CONFIG.SUPABASE_URL;
-var SUPA_KEY = PAWBON_CONFIG.SUPABASE_KEY;
+var API_BASE = PAWBON_CONFIG.API_BASE;
 var lineId = '';
 var familyData = null;
-var FREE_SLOTS = 2; // デフォルト値。DB読み込み後に上書き
+var FREE_SLOTS = 2; // デフォルト値
 var bonusSlots = 0;
 var paidSlots = 0;
 var selectedPayQty = 1;
-
-function supaGet(path) {
-  return fetch(SUPA_URL + '/rest/v1/' + path, {
-    headers: { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY }
-  }).then(function(r){ return r.json(); });
-}
 
 // ═══ LIFF ═══
 async function initLiff() {
@@ -463,10 +456,7 @@ async function initLiff() {
     var profile = await liff.getProfile();
     lineId = profile.userId;
   } catch (e) {
-    try {
-      var latest = await supaGet('pet_families?order=registered_at.desc&limit=1');
-      if (Array.isArray(latest) && latest.length > 0) lineId = latest[0].owner_line_id;
-    } catch (e2) {}
+    lineId = 'debug_user_' + Date.now();
   }
   if (lineId) {
     loadFamily();
@@ -477,80 +467,49 @@ async function initLiff() {
 }
 initLiff();
 
-// ═══ Load ═══
+// ═══ Load（Edge Function 経由） ═══
 async function loadFamily() {
   try {
-    // 1. このlineIdがオーナーの家族を検索
-    var families = await supaGet('pet_families?owner_line_id=eq.' + encodeURIComponent(lineId) + '&limit=1');
-    var role = '';
-    var family = null;
+    var res = await fetch(API_BASE + '/api-family-manage?lineId=' + encodeURIComponent(lineId));
+    var json = await res.json();
 
-    if (Array.isArray(families) && families.length > 0) {
-      family = families[0];
-      role = 'owner';
-    }
-
-    // 2. オーナーでない場合、メンバーレコードを検索
-    if (!family) {
-      var memberRecords = await supaGet('family_members?member_line_id=eq.' + encodeURIComponent(lineId) + '&order=registered_at.desc');
-      var memberOf = Array.isArray(memberRecords) ? memberRecords : [];
-
-      for (var i = 0; i < memberOf.length; i++) {
-        var mCode = memberOf[i].family_code;
-        var fam = await supaGet('pet_families?family_code=eq.' + encodeURIComponent(mCode) + '&limit=1');
-        if (Array.isArray(fam) && fam.length > 0) {
-          if (fam[0].owner_line_id !== lineId) {
-            family = fam[0];
-            role = 'member';
-            break;
-          }
-        }
-      }
-    }
-
-    if (!family) {
+    if (!json.success) {
       document.getElementById('loading').innerHTML =
         '<div class="empty"><div class="icon">📝</div>まだ登録されていません<br><br>先にペット登録を行ってください</div>';
       return;
     }
 
-    var rawMembers = await supaGet('family_members?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=registered_at.asc');
-    var allMembers = Array.isArray(rawMembers) ? rawMembers : [];
+    var data = json.data || {};
+    var role = data.role;
+    var allMembers = data.members || [];
+    var recentCheckins = data.recentCheckins || [];
 
-    var rawCheckins;
-    try {
-      rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=checkin_date.desc&limit=7');
-    } catch(ec) { rawCheckins = null; }
-    if (!Array.isArray(rawCheckins)) {
-      try {
-        rawCheckins = await supaGet('checkins?family_code=eq.' + encodeURIComponent(family.family_code) + '&order=id.desc&limit=7');
-      } catch(ec2) { rawCheckins = []; }
-    }
-    var recentCheckins = Array.isArray(rawCheckins) ? rawCheckins : [];
+    // bonus_slots/paid_slots/max_members は DB に無い場合 fallback
+    bonusSlots = 0;
+    paidSlots = 0;
+    FREE_SLOTS = 2;
 
-    // ボーナス枠: invited_by を持つ pet_families の数（この人が招待した新規オーナー数）
-    bonusSlots = family.bonus_slots || 0;
-    paidSlots = family.paid_slots || 0;
-    FREE_SLOTS = family.max_members || 2; // 後台で設定した基本枠を反映
+    // ownerLineId をメンバーリストから取得
+    var ownerLineId = '';
+    var ownerName = '';
+    allMembers.forEach(function(m) {
+      if (m.relation === 'オーナー') {
+        ownerLineId = m.member_line_id;
+        ownerName = m.display_name || '';
+      }
+    });
 
     familyData = {
       role: role,
-      familyCode: family.family_code,
-      referralCode: family.referral_code || '',
-      petNames: family.pet_names,
-      area: family.area + ' ' + (family.area_detail || ''),
-      ownerLineId: family.owner_line_id,
-      ownerName: family.owner_name || '',
+      familyCode: data.familyCode,
+      referralCode: '',
+      petNames: data.petNames,
+      area: (data.area || '') + ' ' + (data.areaDetail || ''),
+      ownerLineId: ownerLineId,
+      ownerName: ownerName,
       members: allMembers,
       recentCheckins: recentCheckins
     };
-
-    // オーナーの表示名をメンバーリストから取得
-    allMembers.forEach(function(m) {
-      if (m.member_line_id === family.owner_line_id && m.relation === 'オーナー') {
-        familyData.ownerName = m.display_name || familyData.ownerName;
-      }
-    });
 
     document.getElementById('loading').style.display = 'none';
 
@@ -606,13 +565,13 @@ function renderCheckins(checkins, containerId) {
   }
   var weekdays = ['日','月','火','水','木','金','土'];
   container.innerHTML = checkins.map(function(r) {
-    var dateStr = r.checkin_date || r.check_date || r.date || '';
+    var dateStr = r.date || r.checkin_date || r.check_date || '';
     var d = new Date(dateStr);
     var label = isNaN(d.getTime()) ? dateStr : ((d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）');
     if (r.status === 'genki') {
       return '<div class="record-row"><span>' + label + '</span><span class="g">✅ 全員元気</span></div>';
     } else {
-      var worry = r.worried_pets || '心配';
+      var worry = r.worried_pets || r.worriedPets || '心配';
       return '<div class="record-row"><span>' + label + '</span><span class="w">⚠️ ' + escapeHtml(worry) + '</span></div>';
     }
   }).join('');
@@ -728,21 +687,22 @@ function confirmDeleteMember(memberLineId, displayName) {
 
 async function deleteMember(memberLineId, displayName) {
   try {
-    var res = await fetch(SUPA_URL + '/rest/v1/family_members?family_code=eq.' + encodeURIComponent(familyData.familyCode) + '&member_line_id=eq.' + encodeURIComponent(memberLineId), {
-      method: 'DELETE',
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': 'Bearer ' + SUPA_KEY
-      }
+    var res = await fetch(API_BASE + '/api-family-manage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lineId: lineId,
+        targetLineId: memberLineId
+      })
     });
-    if (res.ok) {
+    var result = await res.json();
+    if (result.success) {
       alert('✅ 「' + displayName + '」を削除しました');
-      // メンバーリストを更新
       familyData.members = familyData.members.filter(function(m) { return m.member_line_id !== memberLineId; });
       renderOwnerView();
     } else {
-      var err = await res.text();
-      alert('❌ 削除エラー: ' + err);
+      var err = result.error || {};
+      alert('❌ 削除エラー: ' + (err.message || err.code || '不明なエラー'));
     }
   } catch(e) {
     alert('❌ 通信エラー: ' + e.message);
