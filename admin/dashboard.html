@@ -1,0 +1,2197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PawBon Admin — データベース管理</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --rose:#E8475F; --rose-l:#FFF0F2; --teal:#2ECDA7; --teal-d:#1FA882; --teal-l:#EDFCF7;
+  --amber:#FFB347; --amber-l:#FFF8EC; --orange:#FF7B54; --orange-l:#FFF4F0;
+  --ink:#1A1A2E; --s700:#334155; --s600:#475569; --s500:#64748B;
+  --s400:#94A3B8; --s300:#CBD5E1; --s200:#E2E8F0; --s100:#F1F5F9;
+  --bg:#F8F6F3; --card:#FFFFFF;
+  --sidebar-w: 240px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;display:flex;}
+
+.sidebar{width:var(--sidebar-w);background:var(--ink);color:#fff;position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:10;}
+.sidebar-brand{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,.06);}
+.sidebar-brand h1{font-size:18px;font-weight:900;display:flex;align-items:center;gap:8px;}
+.sidebar-brand p{font-size:11px;color:var(--s400);margin-top:4px;}
+.sidebar-section{padding:16px 12px 8px;font-size:10px;font-weight:700;color:var(--s500);letter-spacing:1.5px;text-transform:uppercase;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 20px;font-size:13px;color:var(--s400);cursor:pointer;transition:all .15s;border-left:3px solid transparent;}
+.sidebar-item:hover{background:rgba(255,255,255,.04);color:var(--s300);}
+.sidebar-item.active{background:rgba(46,205,167,.08);color:var(--teal);border-left-color:var(--teal);font-weight:700;}
+.sidebar-item .icon{font-size:16px;width:20px;text-align:center;}
+.sidebar-item .badge{margin-left:auto;background:var(--teal);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;}
+
+.main{margin-left:var(--sidebar-w);flex:1;padding:24px 32px 60px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.topbar h2{font-size:20px;font-weight:900;}
+.conn-panel{background:var(--card);border-radius:16px;padding:24px;margin-bottom:24px;border:1px solid var(--s200);}
+.conn-panel h3{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.conn-grid{display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;}
+.conn-field label{display:block;font-size:11px;font-weight:700;color:var(--s500);margin-bottom:4px;letter-spacing:.5px;}
+.conn-field input{width:100%;padding:10px 14px;border:1.5px solid var(--s200);border-radius:10px;font-size:13px;font-family:'JetBrains Mono',monospace;background:var(--bg);}
+.conn-field input:focus{outline:none;border-color:var(--teal);}
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--card);border-radius:14px;padding:16px 20px;border:1px solid var(--s200);}
+.stat-card .num{font-size:28px;font-weight:900;}
+.stat-card .label{font-size:11px;color:var(--s500);font-weight:600;margin-top:2px;}
+.stat-card.teal .num{color:var(--teal-d);}
+.stat-card.rose .num{color:var(--rose);}
+.stat-card.amber .num{color:var(--orange);}
+.stat-card.blue .num{color:#3B82F6;}
+.stat-card.purple .num{color:#8B5CF6;}
+
+.btn{padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--teal);color:#fff;}
+.btn-primary:hover{background:var(--teal-d);}
+.btn-outline{background:var(--card);color:var(--s600);border:1.5px solid var(--s200);}
+.btn-outline:hover{border-color:var(--s400);}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:8px;}
+.btn-danger{background:var(--rose);color:#fff;}
+.btn-amber{background:var(--amber);color:#fff;}
+
+.table-wrap{background:var(--card);border-radius:16px;border:1px solid var(--s200);overflow:hidden;margin-bottom:24px;}
+.table-header{padding:16px 20px;border-bottom:1px solid var(--s200);display:flex;align-items:center;justify-content:space-between;}
+.table-header h3{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.table-header .count{font-size:12px;color:var(--s400);font-weight:500;}
+.table-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead{background:var(--s100);}
+th{padding:10px 14px;text-align:left;font-weight:700;color:var(--s600);white-space:nowrap;border-bottom:1px solid var(--s200);font-size:11px;letter-spacing:.3px;}
+td{padding:10px 14px;border-bottom:1px solid var(--s100);vertical-align:top;}
+tr:hover td{background:rgba(46,205,167,.03);}
+td.mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--s600);}
+td .tag{display:inline-block;padding:2px 10px;border-radius:6px;font-size:11px;font-weight:600;}
+td .tag.genki{background:#DCFCE7;color:#166534;}
+td .tag.worry{background:#FEF2F2;color:#991B1B;}
+td .tag.active{background:#DBEAFE;color:#1E40AF;}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px;}
+.status-dot.on{background:#4ADE80;}.status-dot.off{background:var(--s300);}
+.empty{padding:60px 20px;text-align:center;color:var(--s400);}
+.empty .icon{font-size:48px;margin-bottom:12px;}
+.loading{padding:40px;text-align:center;color:var(--s400);font-size:13px;}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid var(--s200);border-top-color:var(--teal);border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;color:#fff;z-index:100;opacity:0;transform:translateY(10px);transition:all .3s;}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.ok{background:var(--teal-d);}
+.toast.err{background:var(--rose);}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* Quota Management */
+.quota-family-card{background:var(--card);border-radius:14px;border:1px solid var(--s200);margin-bottom:12px;overflow:hidden;}
+.quota-family-header{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--s100);}
+.quota-family-header .code{font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--rose);font-size:14px;}
+.quota-family-header .pets{font-size:13px;font-weight:600;flex:1;}
+.quota-family-header .area{font-size:11px;color:var(--s400);}
+.quota-body{padding:14px 16px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;align-items:center;}
+.quota-item{text-align:center;}
+.quota-item .val{font-size:22px;font-weight:900;}
+.quota-item .lbl{font-size:10px;color:var(--s500);margin-top:2px;}
+.quota-item .val.teal{color:var(--teal-d);}
+.quota-item .val.amber{color:var(--orange);}
+.quota-item .val.purple{color:#8B5CF6;}
+.quota-item .val.blue{color:#3B82F6;}
+.quota-actions{padding:12px 16px;border-top:1px solid var(--s100);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.quota-actions .group{display:flex;align-items:center;gap:6px;background:var(--s100);padding:4px 6px;border-radius:8px;}
+.quota-actions .group label{font-size:10px;font-weight:700;color:var(--s500);white-space:nowrap;}
+.quota-actions .group input{width:50px;padding:4px 8px;border:1.5px solid var(--s200);border-radius:6px;font-size:12px;font-family:'JetBrains Mono',monospace;text-align:center;background:#fff;}
+.quota-actions .group input:focus{outline:none;border-color:var(--teal);}
+.total-quota{font-size:12px;margin-left:auto;color:var(--s500);font-weight:600;}
+.total-quota strong{color:var(--ink);}
+
+/* Search bar */
+.search-bar{display:flex;gap:8px;margin-bottom:16px;}
+.search-bar input{flex:1;padding:10px 14px;border:1.5px solid var(--s200);border-radius:10px;font-size:13px;background:var(--card);}
+.search-bar input:focus{outline:none;border-color:var(--teal);}
+
+/* Log table */
+.log-row{font-size:11px;}
+.log-row .time{color:var(--s400);font-family:'JetBrains Mono',monospace;}
+.log-row .action{font-weight:700;}
+.log-row .action.add{color:var(--teal-d);}
+.log-row .action.remove{color:var(--rose);}
+.log-row .action.purchase{color:var(--orange);}
+
+@media(max-width:900px){
+  .sidebar{width:60px;}
+  .sidebar-brand h1 span,.sidebar-brand p,.sidebar-section,.sidebar-item span:not(.icon),.sidebar-item .badge{display:none;}
+  .sidebar-item{padding:12px 0;justify-content:center;}
+  .main{margin-left:60px;padding:16px;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .conn-grid{grid-template-columns:1fr;}
+  .quota-body{grid-template-columns:1fr 1fr;}
+}
+
+/* ═══ OpenChat運営 Styles ═══ */
+.ops-hint{background:#E8F8ED;border-left:4px solid #06c755;border-radius:0 8px 8px 0;padding:12px 16px;font-size:12px;line-height:1.8;margin-bottom:16px;color:#1A1A2E;}
+.ops-hint strong{font-weight:700;}
+.ops-hint.warn{background:#FFF8EE;border-color:#FFB347;}
+.ops-hint.err{background:#FFF0F2;border-color:#E8475F;}
+.ops-checklist{list-style:none;margin:0;padding:0;}
+.ops-check{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--s100);cursor:pointer;transition:background .15s;}
+.ops-check:hover{background:var(--s50);}
+.ops-check:last-child{border-bottom:none;}
+.ops-check .ck{width:22px;height:22px;border-radius:6px;border:2px solid var(--s300);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent;transition:all .2s;margin-top:1px;}
+.ops-check .ck.done{background:var(--teal-d);border-color:var(--teal-d);color:#fff;}
+.ops-check.is-done{opacity:.5;}
+.ops-check.is-done .ck-title{text-decoration:line-through;}
+.ck-body{flex:1;min-width:0;}
+.ck-title{font-size:13px;font-weight:600;}
+.ck-meta{font-size:11px;color:var(--s500);margin-top:2px;display:flex;gap:10px;flex-wrap:wrap;}
+.ck-meta .ck-time{font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--teal-d);}
+.ck-meta .ck-type{font-weight:700;font-size:10px;padding:1px 6px;border-radius:4px;}
+.ck-type.semi{background:#E8F8ED;color:#05A847;}
+.ck-type.manual{background:#FFF0F2;color:#D03A50;}
+
+.tmpl-card{background:var(--card);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,.04),0 4px 12px rgba(0,0,0,.06);overflow:hidden;}
+.tmpl-head{padding:12px 16px;color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px;}
+.tmpl-head .tmpl-id{background:rgba(255,255,255,.2);padding:2px 8px;border-radius:6px;font-size:10px;font-family:'JetBrains Mono',monospace;}
+.tmpl-content{padding:16px;font-size:12px;line-height:2;background:var(--s50);border:1.5px solid var(--s100);border-radius:8px;margin:12px 16px;white-space:pre-line;max-height:240px;overflow-y:auto;}
+.tmpl-foot{padding:10px 16px;border-top:1px solid var(--s100);display:flex;gap:8px;flex-wrap:wrap;}
+.tmpl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;margin-top:16px;}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px;}
+.cal-day{background:var(--card);border-radius:10px;padding:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);border-top:3px solid var(--s200);min-height:100px;}
+.cal-day.has-topic{border-top-color:#06c755;}
+.cal-day .cal-label{font-weight:800;font-size:13px;margin-bottom:6px;}
+.cal-day .cal-topic{font-weight:700;color:#05A847;font-size:12px;}
+.cal-day .cal-eg{color:var(--s500);font-size:11px;line-height:1.5;margin-top:4px;}
+.cal-day .cal-status{margin-top:6px;font-size:10px;}
+
+.lifecycle-bar{display:flex;gap:4px;align-items:stretch;margin:16px 0;}
+.lc-node{flex:1;padding:14px;border-radius:10px;font-size:11px;line-height:1.5;}
+.lc-node .lc-icon{font-size:22px;}
+.lc-node .lc-name{font-weight:800;font-size:12px;margin-top:2px;}
+.lc-node .lc-cond{font-weight:700;opacity:.8;margin-top:1px;}
+.lc-arrow{display:flex;align-items:center;font-size:16px;color:var(--s400);flex-shrink:0;}
+.lc-seed{background:#E0F2FE;color:#0369A1;}
+.lc-nurture{background:#E8F8ED;color:#05A847;}
+.lc-selfrun{background:#FFF8EE;color:#B8860B;}
+.lc-split{background:#FFF0F2;color:#D03A50;}
+
+.mod-card{padding:14px 16px;border-radius:10px;border-left:4px solid;margin-bottom:10px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.mod-card.sev-red{border-color:var(--rose);}
+.mod-card.sev-yellow{border-color:var(--amber-d,#E89B2D);}
+.mod-card.sev-info{border-color:var(--teal-d);}
+.mod-card .mod-head{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;margin-bottom:4px;}
+.mod-card .mod-body{font-size:12px;color:var(--s500);line-height:1.6;}
+
+.manual-section{background:var(--card);border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.manual-header{padding:14px 20px;cursor:pointer;display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;border-bottom:1px solid var(--s100);transition:background .15s;}
+.manual-header:hover{background:var(--s50);}
+.manual-header .arrow{margin-left:auto;transition:transform .2s;font-size:12px;}
+.manual-header.open .arrow{transform:rotate(180deg);}
+.manual-body{padding:0 20px;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .3s;}
+.manual-body.open{max-height:2000px;padding:16px 20px;}
+.manual-body table{width:100%;border-collapse:collapse;font-size:12px;}
+.manual-body th{background:var(--s50);padding:8px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--s500);border-bottom:2px solid var(--s200);}
+.manual-body td{padding:8px 10px;border-bottom:1px solid var(--s100);vertical-align:top;}
+
+.post-log-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--s100);font-size:12px;align-items:flex-start;}
+.post-log-item:last-child{border-bottom:none;}
+.post-log-item .ptime{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--s500);white-space:nowrap;min-width:80px;}
+.post-log-item .ptype{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;white-space:nowrap;}
+.ptype-daily{background:#E8F8ED;color:#05A847;}
+.ptype-weekly{background:#E0F2FE;color:#0369A1;}
+.ptype-achieve{background:#FFF8EE;color:#B8860B;}
+.ptype-welcome{background:#F0EDFF;color:#6B21A8;}
+.ptype-topic{background:#ECFDF5;color:#059669;}
+.ptype-announce{background:#FFF0F2;color:#D03A50;}
+
+.copied-toast{position:fixed;top:16px;right:16px;background:var(--teal-d);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(0,0,0,.15);z-index:9999;animation:fadeIO 2s forwards;pointer-events:none;}
+@keyframes fadeIO{0%{opacity:0;transform:translateY(-10px);}15%{opacity:1;transform:translateY(0);}85%{opacity:1;}100%{opacity:0;transform:translateY(-10px);}}
+
+/* Changelog Modal */
+.cl-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(26,26,46,.55);z-index:9998;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.cl-overlay.show{display:flex;}
+.cl-modal{background:var(--card);border-radius:18px;width:640px;max-width:90vw;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.2);overflow:hidden;animation:clSlide .25s ease;}
+@keyframes clSlide{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+.cl-head{padding:24px 28px 16px;border-bottom:1px solid var(--s200);display:flex;align-items:center;gap:12px;}
+.cl-head h2{font-size:18px;font-weight:900;flex:1;}
+.cl-close{width:32px;height:32px;border-radius:8px;border:none;background:var(--s100);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.cl-close:hover{background:var(--s200);}
+.cl-body{padding:20px 28px 28px;overflow-y:auto;flex:1;}
+.cl-ver{margin-bottom:24px;}
+.cl-ver:last-child{margin-bottom:0;}
+.cl-ver-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.cl-ver-tag{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;padding:3px 12px;border-radius:8px;background:var(--teal-l);color:var(--teal-d);}
+.cl-ver-tag.current{background:var(--teal);color:#fff;}
+.cl-ver-tag.old{background:var(--s100);color:var(--s500);}
+.cl-ver-date{font-size:12px;color:var(--s400);font-family:'JetBrains Mono',monospace;}
+.cl-ver-title{font-size:13px;font-weight:700;color:var(--ink);margin-left:4px;}
+.cl-changes{list-style:none;padding:0;}
+.cl-changes li{padding:5px 0 5px 20px;font-size:12px;color:var(--s600);line-height:1.6;position:relative;}
+.cl-changes li::before{content:'';position:absolute;left:4px;top:12px;width:6px;height:6px;border-radius:50%;background:var(--s300);}
+.cl-changes li.feat::before{background:var(--teal);}
+.cl-changes li.fix::before{background:var(--rose);}
+.cl-changes li.improve::before{background:var(--amber);}
+.cl-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-right:4px;vertical-align:1px;}
+.cl-badge.feat{background:#E8F8ED;color:#05A847;}
+.cl-badge.fix{background:#FFF0F2;color:#D03A50;}
+.cl-badge.improve{background:#FFF8EE;color:#B8860B;}
+
+@media(max-width:900px){
+  .cal-grid{grid-template-columns:1fr 1fr;}
+  .lifecycle-bar{flex-direction:column;}
+  .lc-arrow{transform:rotate(90deg);justify-content:center;}
+  .tmpl-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ Sidebar ═══ -->
+<div class="sidebar">
+  <div class="sidebar-brand">
+    <h1>🐾 <span>PawBon Admin</span></h1>
+    <p>データベース管理 <a href="javascript:void(0)" onclick="showChangelog()" style="color:var(--teal);text-decoration:none;cursor:pointer;border-bottom:1px dashed var(--teal);" title="更新履歴を表示">v0.5.2</a></p>
+  </div>
+
+  <div class="sidebar-section">テーブル</div>
+  <div class="sidebar-item active" data-tab="dashboard"><span class="icon">📊</span><span>ダッシュボード</span></div>
+  <div class="sidebar-item" data-tab="pet_families"><span class="icon">🏠</span><span>pet_families</span><span class="badge" id="badge-families">-</span></div>
+  <div class="sidebar-item" data-tab="family_members"><span class="icon">👥</span><span>family_members</span><span class="badge" id="badge-members">-</span></div>
+  <div class="sidebar-item" data-tab="checkins"><span class="icon">✅</span><span>checkins</span><span class="badge" id="badge-checkins">-</span></div>
+  <div class="sidebar-item" data-tab="referrals"><span class="icon">🎁</span><span>referrals</span><span class="badge" id="badge-referrals">-</span></div>
+
+  <div class="sidebar-section">管理</div>
+  <div class="sidebar-item" data-tab="quota_mgmt"><span class="icon">🎫</span><span>枠・課金管理</span></div>
+  <div class="sidebar-item" data-tab="openchat_list"><span class="icon">💬</span><span>OpenChat一覧</span><span class="badge" id="badge-openchats">-</span></div>
+  <div class="sidebar-item" data-tab="openchat_bind"><span class="icon">🔗</span><span>家族 × OpenChat</span></div>
+
+  <div class="sidebar-section" style="color:#06c755;">OpenChat運営</div>
+  <div class="sidebar-item" data-tab="oc_daily"><span class="icon">☀️</span><span>日次運営パネル</span></div>
+  <div class="sidebar-item" data-tab="oc_templates"><span class="icon">📋</span><span>投稿テンプレート</span></div>
+  <div class="sidebar-item" data-tab="oc_calendar"><span class="icon">📅</span><span>話題カレンダー</span></div>
+  <div class="sidebar-item" data-tab="oc_moderation"><span class="icon">🛡️</span><span>モデレーション</span></div>
+  <div class="sidebar-item" data-tab="oc_manual"><span class="icon">📖</span><span>運営マニュアル</span></div>
+
+  <div class="sidebar-section">ビュー</div>
+  <div class="sidebar-item" data-tab="today_summary"><span class="icon">📋</span><span>today_summary</span></div>
+  <div class="sidebar-item" data-tab="family_overview"><span class="icon">📈</span><span>family_overview</span></div>
+
+  <div class="sidebar-section">ツール</div>
+  <div class="sidebar-item" data-tab="sql"><span class="icon">⚡</span><span>SQL / REST</span></div>
+</div>
+
+<!-- ═══ Main ═══ -->
+<div class="main">
+
+  <div class="conn-panel" id="connPanel">
+    <h3><span class="status-dot off" id="connDot"></span> Supabase 接続設定</h3>
+    <div class="conn-grid">
+      <div class="conn-field"><label>PROJECT URL</label><input type="text" id="inputUrl" placeholder="https://xxxxx.supabase.co"></div>
+      <div class="conn-field"><label>ANON API KEY</label><input type="password" id="inputKey" placeholder="eyJhbGciOi..."></div>
+      <button class="btn btn-primary" onclick="connect()">接続</button>
+    </div>
+  </div>
+
+  <!-- ═══ Dashboard ═══ -->
+  <div class="tab-content active" id="tab-dashboard">
+    <div class="topbar"><h2>📊 ダッシュボード</h2><button class="btn btn-outline btn-sm" onclick="refreshAll()">🔄 全更新</button></div>
+    <div class="stats-row">
+      <div class="stat-card teal"><div class="num" id="stat-families">-</div><div class="label">登録家族数</div></div>
+      <div class="stat-card blue"><div class="num" id="stat-members">-</div><div class="label">家族メンバー数</div></div>
+      <div class="stat-card amber"><div class="num" id="stat-checkins">-</div><div class="label">総チェックイン数</div></div>
+      <div class="stat-card rose"><div class="num" id="stat-worry">-</div><div class="label">心配報告数</div></div>
+      <div class="stat-card purple"><div class="num" id="stat-revenue">¥0</div><div class="label">月間課金収入</div></div>
+    </div>
+    <div id="dashboardContent"></div>
+  </div>
+
+  <!-- ═══ Table Tabs ═══ -->
+  <div class="tab-content" id="tab-pet_families">
+    <div class="topbar"><h2>🏠 pet_families</h2><button class="btn btn-outline btn-sm" onclick="loadTable('pet_families')">🔄 更新</button></div>
+    <div id="table-pet_families"></div>
+  </div>
+  <div class="tab-content" id="tab-family_members">
+    <div class="topbar"><h2>👥 family_members</h2><button class="btn btn-outline btn-sm" onclick="loadTable('family_members')">🔄 更新</button></div>
+    <div id="table-family_members"></div>
+  </div>
+  <div class="tab-content" id="tab-checkins">
+    <div class="topbar"><h2>✅ checkins</h2><button class="btn btn-outline btn-sm" onclick="loadTable('checkins')">🔄 更新</button></div>
+    <div id="table-checkins"></div>
+  </div>
+  <div class="tab-content" id="tab-referrals">
+    <div class="topbar"><h2>🎁 referrals</h2><button class="btn btn-outline btn-sm" onclick="loadTable('referrals')">🔄 更新</button></div>
+    <div id="table-referrals"></div>
+  </div>
+
+  <!-- ═══ 枠・課金管理 ═══ -->
+  <div class="tab-content" id="tab-quota_mgmt">
+    <div class="topbar"><h2>🎫 枠・課金管理</h2><button class="btn btn-outline btn-sm" onclick="loadQuotaMgmt()">🔄 更新</button></div>
+
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat-card teal"><div class="num" id="q-total-free">-</div><div class="label">基本枠（全体）</div></div>
+      <div class="stat-card amber"><div class="num" id="q-total-bonus">-</div><div class="label">招待ボーナス枠</div></div>
+      <div class="stat-card purple"><div class="num" id="q-total-paid">-</div><div class="label">課金枠</div></div>
+      <div class="stat-card rose"><div class="num" id="q-monthly-revenue">¥0</div><div class="label">月間収入（推定）</div></div>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="quotaSearch" placeholder="🔍 家族コード・ペット名で検索..." oninput="filterQuota()">
+    </div>
+    <div id="quotaList"></div>
+  </div>
+
+  <!-- ═══ OpenChat一覧管理 ═══ -->
+  <div class="tab-content" id="tab-openchat_list">
+    <div class="topbar"><h2>💬 OpenChat一覧 ＆ 運営</h2><button class="btn btn-primary btn-sm" onclick="showOcForm()">＋ 新規追加</button><button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="loadOcList()">🔄 更新</button></div>
+
+    <!-- 運営KPI -->
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr);">
+      <div class="stat-card teal"><div class="num" id="oc-stat-total">-</div><div class="label">グループ数</div></div>
+      <div class="stat-card blue"><div class="num" id="oc-stat-members">-</div><div class="label">合計メンバー</div></div>
+      <div class="stat-card amber"><div class="num" id="oc-stat-reported">-</div><div class="label">今日レポート済</div></div>
+      <div class="stat-card rose"><div class="num" id="oc-stat-pending">-</div><div class="label">未レポート</div></div>
+      <div class="stat-card" style="background:var(--s50);"><div class="num" id="oc-stat-families">-</div><div class="label">紐づけ家族数</div></div>
+    </div>
+
+    <!-- 新規追加/編集フォーム -->
+    <div class="table-wrap" id="ocFormWrap" style="display:none;padding:20px;margin-bottom:16px;">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:16px;" id="ocFormTitle">💬 新規OpenChat登録</h3>
+      <input type="hidden" id="ocEditId" value="">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">グループ名 *</label><input type="text" id="ocName" placeholder="例: 渋谷ペット友の会" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">招待URL</label><input type="text" id="ocUrl" placeholder="https://line.me/ti/openchat/..." style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;font-family:'JetBrains Mono',monospace;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">参加人数</label><input type="number" id="ocMembers" placeholder="0" min="0" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">🌏 国</label><select id="ocCountry" onchange="onOcCountryChange()" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;background:var(--card);"></select></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">都道府県 / 州</label><select id="ocArea" onchange="updateOcAreaDetail()" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;background:var(--card);"><option value="">選択してください</option></select></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">市区町村</label><select id="ocAreaDetail" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;background:var(--card);"><option value="">選択してください</option></select></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">備考</label><input type="text" id="ocNotes" placeholder="管理者メモ" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">紹介文</label><textarea id="ocDesc" rows="1" placeholder="グループの説明..." style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;resize:vertical;font-family:inherit;"></textarea></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">🏷️ フェーズ</label><select id="ocPhase" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;background:var(--card);"><option value="seed">🌱 作成（seed）</option><option value="nurture">🌿 育成（nurture: 10-50人）</option><option value="selfrun">🌳 自走（selfrun: 50人+）</option><option value="split">🔀 分割検討（split: 500人+）</option><option value="archived">📦 終了（archived）</option></select></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">🌟 地域リーダー名</label><input type="text" id="ocLeader" placeholder="例: モカちゃんの飼い主さん" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-primary" onclick="saveOcEntry()">💾 保存</button>
+        <button class="btn btn-outline" onclick="hideOcForm()">キャンセル</button>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="ocListSearch" placeholder="🔍 名前・地域で検索..." oninput="filterOcList()">
+    </div>
+    <div id="ocListContainer"></div>
+  </div>
+
+  <!-- ═══ 家族 × OpenChat紐づけ ═══ -->
+  <div class="tab-content" id="tab-openchat_bind">
+    <div class="topbar"><h2>🔗 家族 × OpenChat紐づけ</h2><button class="btn btn-amber btn-sm" onclick="autoBind()" style="margin-right:8px;">⚡ エリア自動紐づけ</button><button class="btn btn-outline btn-sm" onclick="loadOcBind()">🔄 更新</button></div>
+
+    <div class="stats-row" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card teal"><div class="num" id="bind-total">-</div><div class="label">登録家族数</div></div>
+      <div class="stat-card blue"><div class="num" id="bind-linked">-</div><div class="label">紐づけ済み</div></div>
+      <div class="stat-card amber"><div class="num" id="bind-unlinked">-</div><div class="label">未紐づけ</div></div>
+    </div>
+
+    <div class="search-bar">
+      <input type="text" id="bindSearch" placeholder="🔍 家族コード・ペット名で検索..." oninput="filterBind()">
+      <select id="bindFilter" onchange="filterBind()" style="padding:10px;border:1.5px solid var(--s200);border-radius:10px;font-size:13px;background:var(--card);">
+        <option value="all">すべて</option>
+        <option value="linked">紐づけ済み</option>
+        <option value="unlinked">未紐づけ</option>
+      </select>
+    </div>
+    <div id="bindList"></div>
+  </div>
+
+  <div class="tab-content" id="tab-today_summary">
+    <div class="topbar"><h2>📋 today_summary</h2><button class="btn btn-outline btn-sm" onclick="loadTable('today_summary')">🔄 更新</button></div>
+    <div id="table-today_summary"></div>
+  </div>
+  <div class="tab-content" id="tab-family_overview">
+    <div class="topbar"><h2>📈 family_overview</h2><button class="btn btn-outline btn-sm" onclick="loadTable('family_overview')">🔄 更新</button></div>
+    <div id="table-family_overview"></div>
+  </div>
+
+  <!-- ═══ 日次運営パネル ═══ -->
+  <div class="tab-content" id="tab-oc_daily">
+    <div class="topbar"><h2>☀️ 日次運営パネル</h2><button class="btn btn-outline btn-sm" onclick="loadOcDaily()">🔄 更新</button><button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="resetDailyChecks()">🔄 チェックリセット</button></div>
+
+    <div class="ops-hint">
+      <strong>⏱️ 合計工数目安：</strong>1群あたり約5分/日 + 話題投稿10分/週。朝のルーティンは 08:30〜08:35 で完了。テンプレートは「📋 投稿テンプレート」タブで生成・コピー。
+    </div>
+
+    <!-- KPI -->
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);">
+      <div class="stat-card teal"><div class="num" id="od-groups">-</div><div class="label">管理中グループ</div></div>
+      <div class="stat-card blue"><div class="num" id="od-today-posts">-</div><div class="label">今日の投稿数</div></div>
+      <div class="stat-card amber"><div class="num" id="od-pending">-</div><div class="label">未レポート群</div></div>
+      <div class="stat-card rose"><div class="num" id="od-mod">-</div><div class="label">モデレーション</div></div>
+    </div>
+
+    <!-- 朝のルーティン -->
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <div class="table-header"><h3>🌅 朝のルーティン（08:30〜）</h3></div>
+      <ul class="ops-checklist" id="dailyMorning">
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">LINE Notifyで日次レポートテンプレートを受信確認</div><div class="ck-meta"><span class="ck-time">08:30</span><span class="ck-type semi">半自動</span>GASが自動送信するテンプレートを確認</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">各地域OpenChatにレポートをコピペ投稿</div><div class="ck-meta"><span class="ck-time">08:31</span><span class="ck-type semi">半自動</span>→「📋テンプレート」タブで生成 → 各群に貼付</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">レポート投稿に一言追加（朝の挨拶）</div><div class="ck-meta"><span class="ck-time">08:32</span><span class="ck-type manual">手動</span>季節感のある自然な一言。定型文は禁止、毎日変える</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">新メンバー参加通知の確認＆歓迎</div><div class="ck-meta"><span class="ck-time">08:33</span><span class="ck-type manual">手動</span>→「📋テンプレート」タブの歓迎テンプレを使用</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">表彰通知の確認＆投稿</div><div class="ck-meta"><span class="ck-time">08:34</span><span class="ck-type semi">半自動</span>連続打刻達成者がいればGASから通知あり</div></div></li>
+      </ul>
+    </div>
+
+    <!-- 日中＆夜 -->
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <div class="table-header"><h3>🌤️ 日中〜夜</h3></div>
+      <ul class="ops-checklist" id="dailyDay">
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">午前中の投稿にリアクション確認</div><div class="ck-meta"><span class="ck-time">12:00頃</span><span class="ck-type manual">手動</span>スマホで1分。初投稿者には必ず反応</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">話題投稿（該当曜日のみ）</div><div class="ck-meta"><span class="ck-time">午後</span><span class="ck-type manual">手動</span>→「📅 話題カレンダー」タブで今日のテーマ確認</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">夕方〜夜の投稿にリアクション確認</div><div class="ck-meta"><span class="ck-time">20:00頃</span><span class="ck-type manual">手動</span>「無視された感」を絶対に生まない</div></div></li>
+        <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">モデレーション確認</div><div class="ck-meta"><span class="ck-time">随時</span><span class="ck-type manual">手動</span>NGワード自動フィルタすり抜け分を目視確認</div></div></li>
+      </ul>
+    </div>
+
+    <!-- グループ別ステータス -->
+    <div class="table-wrap">
+      <div class="table-header"><h3>📊 グループ別 運営ステータス</h3></div>
+      <div id="ocDailyStatus"><div class="empty"><div class="icon">📭</div><p>接続後にデータ表示</p></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ 投稿テンプレート ═══ -->
+  <div class="tab-content" id="tab-oc_templates">
+    <div class="topbar"><h2>📋 投稿テンプレート</h2></div>
+
+    <div class="ops-hint">
+      <strong>使い方：</strong>テンプレートの「📋 コピー」でクリップボードにコピー → 対象OpenChatに貼付。投稿したら「✅ 投稿済」ボタンでログに記録。<br>
+      <strong>ルール：</strong>個人名ではなく<strong>ペット名</strong>で呼ぶ（プライバシー配慮）。朝の一言は毎日変える（定型文禁止）。
+    </div>
+
+    <!-- 投稿先選択 -->
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+      <span style="font-size:12px;font-weight:700;color:var(--s500);">投稿先:</span>
+      <select id="tmplTarget" style="padding:8px 14px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;background:var(--card);min-width:200px;" onchange="onTmplTargetChange()">
+        <option value="">OpenChatを選択...</option>
+      </select>
+      <button class="btn btn-outline btn-sm" id="tmplOpenLink" style="display:none;" onclick="openTmplTarget()">🔗 LINEで開く</button>
+    </div>
+
+    <div class="tmpl-grid" id="tmplContainer">
+      <!-- JS で生成 -->
+    </div>
+
+    <!-- 投稿ログ -->
+    <div class="table-wrap" style="margin-top:20px;">
+      <div class="table-header"><h3>📝 最近の投稿ログ</h3><button class="btn btn-outline btn-sm" onclick="loadPostLog()">🔄</button></div>
+      <div id="postLogList" style="padding:12px 16px;max-height:300px;overflow-y:auto;"><div style="color:var(--s400);font-size:12px;">接続後にデータ表示</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ 話題カレンダー ═══ -->
+  <div class="tab-content" id="tab-oc_calendar">
+    <div class="topbar"><h2>📅 話題カレンダー</h2></div>
+
+    <div class="ops-hint">
+      日次元気レポートは<strong>毎日</strong>配信。以下は追加の話題投稿。過度な投稿は逆効果 — <strong>週3回の話題 + 毎日のレポート</strong>が最適バランス。
+    </div>
+
+    <!-- 今日のハイライト -->
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <div class="table-header"><h3 id="calTodayTitle">📌 今日の投稿テーマ</h3></div>
+      <div id="calTodayContent" style="padding:16px;font-size:13px;line-height:1.8;">読み込み中...</div>
+    </div>
+
+    <!-- 週間カレンダー -->
+    <div class="cal-grid" id="calGrid">
+      <!-- JS生成 -->
+    </div>
+
+    <!-- 話題ストック -->
+    <div class="table-wrap" style="margin-top:20px;">
+      <div class="table-header"><h3>🎯 話題ストック（ネタ切れ時に使用）</h3></div>
+      <div style="padding:0;">
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <thead><tr><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--s500);">カテゴリ</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--s500);">話題例</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--s500);">コピー</th></tr></thead>
+          <tbody id="topicStock">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ モデレーション ═══ -->
+  <div class="tab-content" id="tab-oc_moderation">
+    <div class="topbar"><h2>🛡️ モデレーション</h2><button class="btn btn-outline btn-sm" onclick="loadModLog()">🔄 更新</button></div>
+
+    <div class="ops-hint err">
+      <strong>🚨 即時削除＆退出：</strong>広告スパム / 個人攻撃 / ペット虐待 / 個人情報の露出<br>
+      <strong>🟡 チーム相談：</strong>グレーゾーンはスクショ保存→チーム相談。単独判断しない。
+    </div>
+
+    <!-- インシデント記録 -->
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <div class="table-header"><h3>🚨 インシデント記録</h3></div>
+      <div style="padding:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+          <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">対象グループ</label><select id="modOc" style="width:100%;padding:8px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;background:var(--card);"><option value="">選択...</option></select></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">深刻度</label><select id="modSev" style="width:100%;padding:8px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;background:var(--card);"><option value="red">🔴 即時対応</option><option value="yellow">🟡 要相談</option><option value="info">🔵 情報共有</option></select></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">カテゴリ</label><select id="modCat" style="width:100%;padding:8px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;background:var(--card);"><option>広告スパム</option><option>個人攻撃</option><option>動物虐待</option><option>個人情報</option><option>メンバー間トラブル</option><option>その他</option></select></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+          <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">内容</label><textarea id="modDesc" rows="2" placeholder="何が起きたか..." style="width:100%;padding:8px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;resize:vertical;font-family:inherit;"></textarea></div>
+          <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">対応内容</label><textarea id="modAction" rows="2" placeholder="削除/退出/注意/相談中..." style="width:100%;padding:8px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;resize:vertical;font-family:inherit;"></textarea></div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="saveModLog()">💾 記録する</button>
+      </div>
+    </div>
+
+    <!-- モデレーション履歴 -->
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <div class="table-header"><h3>📜 モデレーション履歴</h3></div>
+      <div id="modLogList" style="padding:12px 16px;max-height:400px;overflow-y:auto;"><div style="color:var(--s400);font-size:12px;">接続後にデータ表示</div></div>
+    </div>
+
+    <!-- NGワードリスト -->
+    <div class="table-wrap">
+      <div class="table-header"><h3>⚙️ NGワード設定リスト（OpenChat管理画面で設定）</h3></div>
+      <div style="padding:16px;font-size:12px;line-height:2;color:var(--s500);">
+        <strong>スパム系：</strong>副業, 稼げる, 在宅ワーク, LINE@, 投資, 仮想通貨, 暗号資産, FX, カジノ<br>
+        <strong>暴力系：</strong>虐待, 暴力, 殴る, 蹴る, 捨てる <span style="color:var(--s400);">（文脈依存のため自動フィルタ後に目視確認）</span><br>
+        <strong>その他：</strong>死ね, 殺す<br>
+        <span style="color:var(--amber-d,#B8860B);">⚠️ 過剰なフィルタは正常な会話を阻害。最小限に設定し、目視補完を推奨。</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 運営マニュアル ═══ -->
+  <div class="tab-content" id="tab-oc_manual">
+    <div class="topbar"><h2>📖 運営マニュアル</h2></div>
+
+    <div class="ops-hint">
+      全オペレーションの統一ルールと手順書。新メンバーのオンボーディングや品質確認に使用。各セクションをクリックで展開。
+    </div>
+
+    <!-- CM行動指針 -->
+    <div class="manual-section">
+      <div class="manual-header" onclick="toggleManual(this)">👤 コミュニティマネージャー 行動指針<span class="arrow">▼</span></div>
+      <div class="manual-body"><table>
+        <tr><th style="width:110px;">行動</th><th style="width:60px;">頻度</th><th>ガイドライン</th><th style="width:70px;">所要時間</th></tr>
+        <tr><td><strong>🌅 朝の挨拶</strong></td><td>毎日</td><td>レポート投稿時に一言追加。季節感のある自然な一言。<strong>定型文は禁止</strong>、毎日変える</td><td>1分</td></tr>
+        <tr><td><strong>💬 話題投げかけ</strong></td><td>週2-3回</td><td>質問形式で投稿し返答を待つ。<strong>連投しない</strong></td><td>2分</td></tr>
+        <tr><td><strong>↩️ リアクション</strong></td><td>随時</td><td>ユーザーが投稿したら<strong>必ず</strong>反応。特に初投稿者。スタンプでもOK。<strong>「無視された感」を絶対に生まない</strong></td><td>1分/件</td></tr>
+        <tr><td><strong>🆕 新メンバー歓迎</strong></td><td>随時</td><td>参加通知を見たら即歓迎。<strong>ペット名で呼ぶ</strong>（個人名禁止）</td><td>1分</td></tr>
+        <tr><td><strong>🛡️ モデレーション</strong></td><td>随時</td><td>広告スパム・個人攻撃・ペット虐待は<strong>即削除＆退出</strong>。判断迷い→チーム相談</td><td>随時</td></tr>
+        <tr><td><strong>📢 お知らせ</strong></td><td>月2-3回</td><td><strong>長文禁止</strong>。画像1枚+短文。<strong>週末夕方</strong>が開封率高い</td><td>5分</td></tr>
+      </table>
+      <div class="ops-hint err" style="margin-top:12px;">
+        <strong>🚫 やってはいけないこと：</strong>定型文の繰り返し / 連投 / 個人名での呼びかけ / 投稿の無視 / 商業的売り込み / モデレーション単独判断
+      </div>
+      </div>
+    </div>
+
+    <!-- グループルール -->
+    <div class="manual-section">
+      <div class="manual-header" onclick="toggleManual(this)">📜 グループ共通ルール（全群に掲示）<span class="arrow">▼</span></div>
+      <div class="manual-body">
+        <div style="background:#E8F8ED;border:2px solid #06c755;border-radius:12px;padding:20px;max-width:420px;">
+          <div id="tmpl-rules" style="font-size:12px;line-height:2.2;white-space:pre-line;">🐾 PawBon ペット元気チェック グループルール
+
+✅ やさしい言葉で話しましょう
+✅ ペットの名前で呼び合いましょう
+✅ 困った時は助け合いましょう
+✅ 写真やお散歩の話題を楽しみましょう
+
+❌ 個人情報（住所・電話番号）の投稿
+❌ 商品の宣伝・勧誘
+❌ ペットへの暴力的な内容
+❌ 他のメンバーへの批判・攻撃
+
+🛡️ ルール違反は削除・退出対象です
+❓ 困ったことがあれば管理者に相談！</div>
+        </div>
+        <button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="copyText('tmpl-rules')">📋 ルールをコピー</button>
+      </div>
+    </div>
+
+    <!-- ライフサイクル -->
+    <div class="manual-section">
+      <div class="manual-header" onclick="toggleManual(this)">🏘️ OpenChatグループ ライフサイクル管理<span class="arrow">▼</span></div>
+      <div class="manual-body">
+        <div class="lifecycle-bar">
+          <div class="lc-node lc-seed"><div class="lc-icon">🌱</div><div class="lc-name">作成判断</div><div class="lc-cond">地域10人+</div></div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-node lc-seed"><div class="lc-icon">📣</div><div class="lc-name">告知＆誘導</div><div class="lc-cond">作成直後</div></div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-node lc-nurture"><div class="lc-icon">🌿</div><div class="lc-name">育成期</div><div class="lc-cond">10-50人</div></div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-node lc-selfrun"><div class="lc-icon">🌳</div><div class="lc-name">自走期</div><div class="lc-cond">50人+</div></div>
+          <div class="lc-arrow">→</div>
+          <div class="lc-node lc-split"><div class="lc-icon">🔀</div><div class="lc-name">分割判断</div><div class="lc-cond">500人+</div></div>
+        </div>
+        <table style="margin-top:16px;">
+        <tr><th>段階</th><th>群数</th><th>日次工数</th><th>運営方針</th></tr>
+        <tr><td>P1-P3（2-3月）</td><td>1群</td><td>5分/日</td><td>管理者1人。手動運営で密度の高いコミュニケーション</td></tr>
+        <tr><td>P4-P5（4-6月）</td><td>5-15群</td><td>30-45分/日</td><td>一括テンプレ→順次コピペ。全群共通テーマで効率化</td></tr>
+        <tr><td>P6（7-9月）</td><td>15-30群</td><td>60-90分/日</td><td>地域リーダー任命開始。レポート＋リーダーサポートに集中</td></tr>
+        <tr><td>P7（10-12月）</td><td>30群+</td><td>軽減</td><td>Appアプリ内コミュニティに段階的移行</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- GAS自動化 -->
+    <div class="manual-section">
+      <div class="manual-header" onclick="toggleManual(this)">⚙️ GAS自動化 実装仕様<span class="arrow">▼</span></div>
+      <div class="manual-body"><table>
+        <tr><th>関数名</th><th style="width:100px;">Trigger</th><th>処理内容</th></tr>
+        <tr><td><code>generateDailyReport()</code></td><td>毎日 8:25</td><td>打刻データ抽出→地域別集計→テンプレ生成→LINE Notify</td></tr>
+        <tr><td><code>generateWeeklyReport()</code></td><td>毎週月 8:55</td><td>7日分データ→曜日別打刻率・TOP3→テンプレ生成→LINE Notify</td></tr>
+        <tr><td><code>checkAchievements()</code></td><td>打刻時</td><td>連続日数チェック→7/30/100/365日達成→表彰テンプレ→LINE Notify</td></tr>
+        <tr><td><code>monitorRegionGrowth()</code></td><td>毎週月 9:30</td><td>地域別ユーザー数→10人+未作成検出 / 500人+分割候補→通知</td></tr>
+      </table>
+      <div class="ops-hint" style="margin-top:12px;">
+        <strong>🔮 自動化ロードマップ：</strong>現在は半自動（GAS→LINE Notify→コピペ）。Phase 7でアプリ内自動配信。2027年以降：OpenChat API一般開放で完全自動化。
+      </div>
+      </div>
+    </div>
+
+    <!-- 地域コミュニティリーダー -->
+    <div class="manual-section">
+      <div class="manual-header" onclick="toggleManual(this)">🌟 地域コミュニティリーダー制度（群数15+で導入）<span class="arrow">▼</span></div>
+      <div class="manual-body">
+        <div class="ops-hint">
+          <strong>対象：</strong>各群の最もアクティブなユーザーに「コミュニティリーダー」を打診。<br>
+          <strong>役割：</strong>話題投稿＆新メンバー歓迎のみ（モデレーション権限は付与しない）<br>
+          <strong>特典：</strong>限定バッジ「🌟 地域リーダー」＋ PetPhone優先体験権<br>
+          <strong>目的：</strong>管理者の負荷を分散しつつ、ユーザー主導のコミュニティ文化を醸成
+        </div>
+      </div>
+    </div>
+
+    <!-- 新規OpenChat作成手順 -->
+    <div class="manual-section">
+      <div class="manual-header" onclick="toggleManual(this)">📋 新規OpenChat作成 手順チェックリスト<span class="arrow">▼</span></div>
+      <div class="manual-body">
+        <ul class="ops-checklist">
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">LINE OpenChatで新規グループを作成</div><div class="ck-meta">名前：「PawBon 🐾 [地域名]ペット元気チェック」</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">グループルールをピン留め投稿</div><div class="ck-meta">上の「📜 グループ共通ルール」のテンプレをコピー</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">NGワードフィルタを設定</div><div class="ck-meta">「🛡️ モデレーション」タブのNGワードリスト参照</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">管理者プロフィール設定（アイコン: PawBonロゴ / 名前: PawBon運営チーム）</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">Admin管理画面「💬 OpenChat一覧」で新規登録 → URLと地域を設定</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">該当地域ユーザーにLINE公式から参加リンク付き通知を送信</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">GAS配信リストに新群を追加</div></div></li>
+          <li class="ops-check" onclick="toggleOpsCheck(this)"><div class="ck">✓</div><div class="ck-body"><div class="ck-title">初回歓迎投稿を行う</div></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SQL ═══ -->
+  <div class="tab-content" id="tab-sql">
+    <div class="topbar"><h2>⚡ SQL / REST クエリ</h2></div>
+    <div class="table-wrap" style="padding:20px;">
+      <p style="color:var(--s500);font-size:12px;margin-bottom:12px;">PostgREST クエリ形式で実行できます</p>
+      <input type="text" id="restQuery" placeholder="/rest/v1/pet_families?limit=10" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;">
+      <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="runREST()">▶ 実行</button>
+      <div id="restResult" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══ State ═══
+var SUPABASE_URL = '';
+var SUPABASE_KEY = '';
+var connected = false;
+var allFamiliesQuota = [];
+
+// ═══ Connection ═══
+function connect() {
+  SUPABASE_URL = document.getElementById('inputUrl').value.trim().replace(/\/+$/, '');
+  SUPABASE_KEY = document.getElementById('inputKey').value.trim();
+  if (!SUPABASE_URL || !SUPABASE_KEY) { toast('URL と API Key を入力してください','err'); return; }
+  testConnection();
+}
+
+async function testConnection() {
+  try {
+    var res = await supaFetch('/rest/v1/pet_families?limit=1');
+    if (res.ok) {
+      connected = true;
+      document.getElementById('connDot').className = 'status-dot on';
+      document.getElementById('connPanel').querySelector('h3').innerHTML = '<span class="status-dot on"></span> Supabase 接続済み ✅';
+      toast('接続成功！','ok');
+      localStorage.setItem('pb_url', SUPABASE_URL);
+      localStorage.setItem('pb_key', SUPABASE_KEY);
+      refreshAll();
+    } else { toast('接続エラー: ' + res.status, 'err'); }
+  } catch(e) { toast('接続失敗: ' + e.message, 'err'); }
+}
+
+function supaFetch(path, options) {
+  return fetch(SUPABASE_URL + path, Object.assign({
+    headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json', 'Prefer':'count=exact' }
+  }, options || {}));
+}
+
+function supaPatch(table, query, data) {
+  return fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
+    method: 'PATCH',
+    headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+    body: JSON.stringify(data)
+  });
+}
+
+// ═══ Table Config ═══
+var TABLE_CONFIG = {
+  pet_families: {
+    order: 'created_at.desc',
+    columns: ['family_code','referral_code','owner_name','pet_names','breeds','pet_count','country','area','area_detail','max_members','bonus_slots','paid_slots','openchat_id','created_at'],
+    labels: { family_code:'家族コード', referral_code:'紹介コード', owner_name:'飼い主', pet_names:'ペット名', breeds:'品種', pet_count:'頭数', country:'国', area:'都道府県', area_detail:'市区町村', max_members:'基本枠', bonus_slots:'招待枠', paid_slots:'課金枠', openchat_id:'OpenChat', created_at:'登録日' },
+    formatters: {
+      created_at: function(v){ return v ? v.substring(0,10) : '-'; },
+      family_code: function(v){ return '<strong style="color:var(--rose)">'+v+'</strong>'; },
+      referral_code: function(v){ return v ? '<span class="mono" style="color:var(--teal-d)">'+v+'</span>' : '<span style="color:var(--s300)">-</span>'; },
+      max_members: function(v){ return '<span style="color:var(--teal-d);font-weight:700">'+(v||2)+'</span>'; },
+      bonus_slots: function(v){ return '<span style="color:var(--teal-d);font-weight:700">'+(v||0)+'</span>'; },
+      paid_slots: function(v){ return v>0 ? '<span style="color:var(--orange);font-weight:700">'+v+'</span>' : '<span style="color:var(--s300)">0</span>'; },
+      openchat_id: function(v){ return v ? '<span class="tag active">ID:'+v+'</span>' : '<span style="color:var(--s300)">-</span>'; }
+    }
+  },
+  family_members: {
+    order: 'registered_at.desc',
+    columns: ['family_code','member_line_id','display_name','relation','registered_at'],
+    labels: { family_code:'家族コード', member_line_id:'LINE ID', display_name:'表示名', relation:'続柄', registered_at:'登録日' },
+    formatters: {
+      registered_at: function(v){ return v ? v.substring(0,10) : '-'; },
+      member_line_id: function(v){ return '<span class="mono">'+(v?v.substring(0,12)+'...':'-')+'</span>'; }
+    }
+  },
+  checkins: {
+    order: 'id.desc',
+    limit: 100,
+    labels: { id:'ID', checkin_date:'日付', check_date:'日付', family_code:'家族', status:'状態', reporter_line_id:'報告者', worried_pets:'心配な子', symptoms:'症状', memo:'メモ', created_at:'作成日時', streak_days:'連続日数' },
+    formatters: {
+      status: function(v){ return v ? '<span class="tag '+v+'">'+(v==='genki'?'✅ 元気':'⚠️ 心配')+'</span>' : '-'; },
+      family_code: function(v){ return v ? '<strong style="color:var(--rose)">'+v+'</strong>' : '-'; },
+      reporter_line_id: function(v){ return '<span class="mono">'+(v?v.substring(0,12)+'...':'-')+'</span>'; },
+      checkin_date: function(v){ return v ? v.substring(0,10) : '-'; },
+      check_date: function(v){ return v ? v.substring(0,10) : '-'; },
+      created_at: function(v){ return v ? v.substring(0,16).replace('T',' ') : '-'; }
+    },
+    hideColumns: ['id']
+  },
+  referrals: {
+    order: 'created_at.desc',
+    columns: ['referral_code','owner_family_code','owner_line_id','referred_family_code','referred_line_id','status','created_at'],
+    labels: { referral_code:'紹介コード', owner_family_code:'紹介者', owner_line_id:'紹介者LINE', referred_family_code:'被紹介者', referred_line_id:'被紹介者LINE', status:'ステータス', created_at:'日時' },
+    formatters: {
+      referral_code: function(v){ return '<span class="mono" style="color:var(--teal-d);font-weight:700">'+v+'</span>'; },
+      owner_family_code: function(v){ return '<strong style="color:var(--rose)">'+(v||'-')+'</strong>'; },
+      referred_family_code: function(v){ return '<strong style="color:var(--rose)">'+(v||'-')+'</strong>'; },
+      owner_line_id: function(v){ return '<span class="mono">'+(v?v.substring(0,12)+'...':'-')+'</span>'; },
+      referred_line_id: function(v){ return '<span class="mono">'+(v?v.substring(0,12)+'...':'-')+'</span>'; },
+      status: function(v){ return '<span class="tag active">'+(v||'completed')+'</span>'; },
+      created_at: function(v){ return v ? v.substring(0,16).replace('T',' ') : '-'; }
+    }
+  },
+  today_summary: {
+    order: 'area',
+    columns: ['area','area_detail','checked_count','genki_count','worry_count'],
+    labels: { area:'都道府県', area_detail:'市区町村', checked_count:'打刻数', genki_count:'元気', worry_count:'心配' },
+    formatters: {
+      genki_count: function(v){ return '<span style="color:var(--teal-d);font-weight:700">'+v+'</span>'; },
+      worry_count: function(v){ return v>0?'<span style="color:var(--rose);font-weight:700">'+v+'</span>':'0'; }
+    }
+  },
+  family_overview: {
+    order: 'last_checkin.desc.nullslast',
+    columns: ['family_code','pet_names','location','pet_count','member_count','total_days','last_checkin'],
+    labels: { family_code:'家族', pet_names:'ペット', location:'地域', pet_count:'頭数', member_count:'メンバー数', total_days:'打刻日数', last_checkin:'最終打刻' },
+    formatters: {
+      family_code: function(v){ return '<strong style="color:var(--rose)">'+v+'</strong>'; },
+      last_checkin: function(v){ return v||'<span style="color:var(--s400)">未打刻</span>'; }
+    }
+  }
+};
+
+// ═══ Load Table ═══
+async function loadTable(name) {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var container = document.getElementById('table-' + name);
+  if (!container) return;
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
+  var cfg = TABLE_CONFIG[name] || {};
+  var limit = cfg.limit || 200;
+  var orderStr = cfg.order || 'id.desc';
+  var path = '/rest/v1/' + name + '?order=' + orderStr + '&limit=' + limit;
+  try {
+    var res = await supaFetch(path);
+    // order 失敗時はフォールバック（order なし）
+    if (!res.ok) {
+      res = await supaFetch('/rest/v1/' + name + '?limit=' + limit);
+    }
+    var data = await res.json();
+    var total = res.headers.get('content-range');
+    var count = total ? total.split('/')[1] : (Array.isArray(data)?data.length:'?');
+    var badges = { pet_families:'badge-families', family_members:'badge-members', checkins:'badge-checkins' };
+    var b = document.getElementById(badges[name]);
+    if (b) b.textContent = count;
+    if (!Array.isArray(data) || data.length === 0) {
+      container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データがありません</p></div>';
+      // エラーレスポンスの場合は詳細表示
+      if (!Array.isArray(data) && data) {
+        container.innerHTML='<div class="empty"><div class="icon">⚠️</div><p>エラー: '+escapeHtml(JSON.stringify(data).substring(0,200))+'</p></div>';
+      }
+      return;
+    }
+    // カラム: 設定 → 自動検出（データから取得）
+    var allCols = Object.keys(data[0]);
+    var cols = cfg.columns || allCols;
+    // hideColumns フィルタ
+    var hide = cfg.hideColumns || [];
+    cols = cols.filter(function(c){ return hide.indexOf(c) === -1; });
+    var labels = cfg.labels || {};
+    var fmt = cfg.formatters || {};
+    var html = '<div class="table-wrap"><div class="table-header"><h3>'+name+' <span class="count">('+data.length+'/'+count+' 件)</span></h3></div><div class="table-scroll"><table><thead><tr>';
+    cols.forEach(function(c){ html += '<th>'+(labels[c]||c)+'</th>'; });
+    html += '</tr></thead><tbody>';
+    data.forEach(function(row){
+      html += '<tr>';
+      cols.forEach(function(c){
+        var val = row[c];
+        var display = fmt[c] ? fmt[c](val) : (val===null||val===undefined||val===''?'<span style="color:var(--s300)">-</span>':escapeHtml(String(val)));
+        html += '<td>'+display+'</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+    container.innerHTML = html;
+  } catch(e) { container.innerHTML='<div class="empty"><div class="icon">❌</div><p>エラー: '+e.message+'</p></div>'; }
+}
+
+// ═══ Refresh All ═══
+async function refreshAll() {
+  if (!connected) return;
+  try {
+    var r = await Promise.all([
+      supaFetch('/rest/v1/pet_families?select=id&limit=1'),
+      supaFetch('/rest/v1/family_members?select=id&limit=1'),
+      supaFetch('/rest/v1/checkins?select=id&limit=1'),
+      supaFetch('/rest/v1/referrals?select=id&limit=1'),
+      supaFetch('/rest/v1/openchats?select=id&limit=1')
+    ]);
+    var gc = function(x){ var h=x.headers.get('content-range'); return h?h.split('/')[1]:'?'; };
+    document.getElementById('stat-families').textContent = gc(r[0]);
+    document.getElementById('stat-members').textContent = gc(r[1]);
+    document.getElementById('stat-checkins').textContent = gc(r[2]);
+    document.getElementById('badge-families').textContent = gc(r[0]);
+    document.getElementById('badge-members').textContent = gc(r[1]);
+    document.getElementById('badge-checkins').textContent = gc(r[2]);
+    document.getElementById('badge-referrals').textContent = gc(r[3]);
+    document.getElementById('badge-openchats').textContent = gc(r[4]);
+
+    var wRes = await supaFetch('/rest/v1/checkins?status=eq.worry&select=id&limit=1');
+    document.getElementById('stat-worry').textContent = gc(wRes);
+
+    // Revenue estimate
+    var famRes = await supaFetch('/rest/v1/pet_families?select=paid_slots&paid_slots=gt.0');
+    var famData = await famRes.json();
+    var totalPaid = 0;
+    if (Array.isArray(famData)) famData.forEach(function(f){ totalPaid += (f.paid_slots||0); });
+    document.getElementById('stat-revenue').textContent = '¥' + (totalPaid * 100).toLocaleString();
+  } catch(e) {}
+
+  // Dashboard overview
+  try {
+    var ov = await supaFetch('/rest/v1/pet_families?select=family_code,pet_names,area,area_detail,pet_count,max_members,bonus_slots,paid_slots,status,created_at&order=created_at.desc&limit=10');
+    var data = await ov.json();
+    var html = '<div class="table-wrap"><div class="table-header"><h3>📈 最近の登録家族</h3></div>';
+    html += '<div class="table-scroll"><table><thead><tr><th>家族コード</th><th>ペット名</th><th>地域</th><th>頭数</th><th>基本枠</th><th>招待枠</th><th>課金枠</th><th>合計枠</th><th>登録日</th></tr></thead><tbody>';
+    if (Array.isArray(data) && data.length>0) {
+      data.forEach(function(r){
+        var base = r.max_members || 2;
+        var total = base + (r.bonus_slots||0) + (r.paid_slots||0);
+        html += '<tr>';
+        html += '<td><strong style="color:var(--rose)">'+r.family_code+'</strong></td>';
+        html += '<td>'+escapeHtml(r.pet_names||'')+'</td>';
+        html += '<td>'+escapeHtml((r.area||'')+' '+(r.area_detail||''))+'</td>';
+        html += '<td>'+(r.pet_count||0)+'</td>';
+        html += '<td>'+base+'</td>';
+        html += '<td style="color:var(--teal-d);font-weight:700">'+(r.bonus_slots||0)+'</td>';
+        html += '<td style="color:var(--orange);font-weight:700">'+(r.paid_slots||0)+'</td>';
+        html += '<td><strong>'+total+'</strong></td>';
+        html += '<td>'+(r.created_at?r.created_at.substring(0,10):'-')+'</td>';
+        html += '</tr>';
+      });
+    } else { html += '<tr><td colspan="9" style="text-align:center;color:var(--s400);padding:24px;">データなし</td></tr>'; }
+    html += '</tbody></table></div></div>';
+    document.getElementById('dashboardContent').innerHTML = html;
+  } catch(e) { document.getElementById('dashboardContent').innerHTML=''; }
+
+  var activeTab = document.querySelector('.sidebar-item.active').dataset.tab;
+  if (activeTab !== 'dashboard' && activeTab !== 'sql' && activeTab !== 'quota_mgmt') loadTable(activeTab);
+  if (activeTab === 'quota_mgmt') loadQuotaMgmt();
+}
+
+// ═══ Quota Management ═══
+async function loadQuotaMgmt() {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var container = document.getElementById('quotaList');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
+
+  try {
+    var res = await supaFetch('/rest/v1/pet_families?select=*&order=created_at.desc');
+    var families = await res.json();
+    if (!Array.isArray(families)) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
+
+    allFamiliesQuota = families;
+
+    // Get member counts
+    var memRes = await supaFetch('/rest/v1/family_members?select=family_code');
+    var memData = await memRes.json();
+    var memCounts = {};
+    if (Array.isArray(memData)) {
+      memData.forEach(function(m) {
+        memCounts[m.family_code] = (memCounts[m.family_code]||0) + 1;
+      });
+    }
+
+    // Stats
+    var totalBase = 0, totalBonus = 0, totalPaid = 0;
+    families.forEach(function(f){ totalBase += (f.max_members||2); totalBonus += (f.bonus_slots||0); totalPaid += (f.paid_slots||0); });
+    document.getElementById('q-total-free').textContent = totalBase;
+    document.getElementById('q-total-bonus').textContent = totalBonus;
+    document.getElementById('q-total-paid').textContent = totalPaid;
+    document.getElementById('q-monthly-revenue').textContent = '¥' + (totalPaid * 100).toLocaleString();
+
+    renderQuotaList(families, memCounts);
+  } catch(e) { container.innerHTML='<div class="empty"><div class="icon">❌</div><p>'+e.message+'</p></div>'; }
+}
+
+function renderQuotaList(families, memCounts) {
+  var html = '';
+  families.forEach(function(f){
+    var code = f.family_code;
+    var bonus = f.bonus_slots || 0;
+    var paid = f.paid_slots || 0;
+    var maxMem = f.max_members || 2;
+    var totalSlots = maxMem + bonus + paid;
+    var used = (memCounts[code]||0);
+    var ownerInMembers = 1;
+    var actualOther = Math.max(0, used - ownerInMembers);
+    var remaining = totalSlots - actualOther;
+
+    html += '<div class="quota-family-card" data-code="'+escapeHtml(code)+'" data-pets="'+escapeHtml(f.pet_names||'')+'">';
+    html += '<div class="quota-family-header">';
+    html += '<span class="code">'+escapeHtml(code)+'</span>';
+    html += '<span class="pets">🐾 '+escapeHtml(f.pet_names||'')+'</span>';
+    html += '<span class="area">📍 '+escapeHtml((f.area||'')+' '+(f.area_detail||''))+'</span>';
+    html += '</div>';
+
+    html += '<div class="quota-body" style="grid-template-columns:repeat(5,1fr);">';
+    html += '<div class="quota-item"><div class="val teal">'+maxMem+'</div><div class="lbl">基本枠</div></div>';
+    html += '<div class="quota-item"><div class="val amber">'+bonus+'</div><div class="lbl">招待ボーナス</div></div>';
+    html += '<div class="quota-item"><div class="val purple">'+paid+'</div><div class="lbl">課金枠</div></div>';
+    html += '<div class="quota-item"><div class="val" style="color:var(--ink);font-weight:900;">'+totalSlots+'</div><div class="lbl">合計枠</div></div>';
+    html += '<div class="quota-item"><div class="val blue">'+actualOther+' / '+totalSlots+'</div><div class="lbl">使用中</div></div>';
+    html += '</div>';
+
+    html += '<div class="quota-actions">';
+    html += '<div class="group"><label>基本枠</label><input type="number" id="max_'+code+'" value="'+maxMem+'" min="1" max="99"></div>';
+    html += '<div class="group"><label>招待枠</label><input type="number" id="bonus_'+code+'" value="'+bonus+'" min="0" max="99"></div>';
+    html += '<div class="group"><label>課金枠</label><input type="number" id="paid_'+code+'" value="'+paid+'" min="0" max="99"></div>';
+    html += '<button class="btn btn-primary btn-sm" onclick="saveQuota(\''+escapeHtml(code)+'\')">💾 保存</button>';
+    html += '<span class="total-quota">合計: <strong>'+totalSlots+'枠</strong> / 残り: '+(remaining > 0 ? remaining : '<span style="color:var(--rose)">0</span>')+'枠</span>';
+    html += '</div>';
+    html += '</div>';
+  });
+
+  document.getElementById('quotaList').innerHTML = html || '<div class="empty"><div class="icon">📭</div><p>データがありません</p></div>';
+}
+
+async function saveQuota(code) {
+  var maxEl = document.getElementById('max_' + code);
+  var bonusEl = document.getElementById('bonus_' + code);
+  var paidEl = document.getElementById('paid_' + code);
+  if (!maxEl || !bonusEl || !paidEl) return;
+
+  var maxMem = parseInt(maxEl.value) || 2;
+  var bonus = parseInt(bonusEl.value) || 0;
+  var paid = parseInt(paidEl.value) || 0;
+
+  try {
+    var res = await supaPatch('pet_families', 'family_code=eq.' + encodeURIComponent(code), {
+      max_members: maxMem,
+      bonus_slots: bonus,
+      paid_slots: paid
+    });
+    if (res.ok) {
+      toast(code + ' の枠を更新しました（基本:'+maxMem+' / 招待:'+bonus+' / 課金:'+paid+'）','ok');
+      loadQuotaMgmt();
+    } else {
+      var err = await res.text();
+      toast('エラー: '+err, 'err');
+    }
+  } catch(e) {
+    toast('エラー: '+e.message, 'err');
+  }
+}
+
+function filterQuota() {
+  var q = document.getElementById('quotaSearch').value.toLowerCase();
+  document.querySelectorAll('.quota-family-card').forEach(function(card) {
+    var code = (card.getAttribute('data-code')||'').toLowerCase();
+    var pets = (card.getAttribute('data-pets')||'').toLowerCase();
+    card.style.display = (!q || code.indexOf(q)!==-1 || pets.indexOf(q)!==-1) ? '' : 'none';
+  });
+}
+
+// ═══ OpenChat一覧管理 ═══
+var allOpenchats = [];
+var countryAreaMap = {}; // { country: { area: [area_detail, ...] } }
+
+// 内蔵エリアデータ（全世界）
+var BUILTIN_AREAS={"日本":{"北海道":["札幌市","旭川市","函館市","帯広市","釧路市","小樽市","北見市","苫小牧市"],"青森県":["青森市","八戸市","弘前市"],"岩手県":["盛岡市","一関市","奥州市"],"宮城県":["仙台市","石巻市","大崎市"],"秋田県":["秋田市","横手市"],"山形県":["山形市","鶴岡市","酒田市"],"福島県":["福島市","郡山市","いわき市"],"茨城県":["水戸市","つくば市","日立市"],"栃木県":["宇都宮市","小山市","足利市"],"群馬県":["前橋市","高崎市","太田市"],"埼玉県":["さいたま市","川口市","所沢市","川越市","越谷市","春日部市","草加市","上尾市","熊谷市"],"千葉県":["千葉市","船橋市","柏市","松戸市","市川市","浦安市","習志野市","流山市","八千代市"],"東京都":["千代田区","中央区","港区","新宿区","文京区","台東区","墨田区","江東区","品川区","目黒区","大田区","世田谷区","渋谷区","中野区","杉並区","豊島区","北区","荒川区","板橋区","練馬区","足立区","葛飾区","江戸川区","八王子市","町田市","府中市","調布市","武蔵野市","三鷹市","立川市","国分寺市"],"神奈川県":["横浜市","川崎市","相模原市","藤沢市","横須賀市","鎌倉市","茅ヶ崎市","平塚市","厚木市","大和市","小田原市"],"新潟県":["新潟市","長岡市","上越市"],"富山県":["富山市","高岡市"],"石川県":["金沢市","白山市"],"福井県":["福井市","坂井市"],"山梨県":["甲府市","富士吉田市"],"長野県":["長野市","松本市","上田市"],"岐阜県":["岐阜市","大垣市","各務原市"],"静岡県":["静岡市","浜松市","富士市","沼津市"],"愛知県":["名古屋市","豊田市","岡崎市","一宮市","豊橋市","春日井市"],"三重県":["津市","四日市市","鈴鹿市"],"滋賀県":["大津市","草津市","長浜市"],"京都府":["京都市","宇治市","亀岡市"],"大阪府":["大阪市","堺市","豊中市","吹田市","高槻市","枚方市","東大阪市","茨木市","八尾市","寝屋川市"],"兵庫県":["神戸市","姫路市","西宮市","尼崎市","明石市","加古川市","宝塚市","伊丹市"],"奈良県":["奈良市","橿原市","生駒市"],"和歌山県":["和歌山市","田辺市"],"鳥取県":["鳥取市","米子市"],"島根県":["松江市","出雲市"],"岡山県":["岡山市","倉敷市","津山市"],"広島県":["広島市","福山市","呉市","東広島市"],"山口県":["下関市","山口市","周南市"],"徳島県":["徳島市","阿南市"],"香川県":["高松市","丸亀市"],"愛媛県":["松山市","今治市","新居浜市"],"高知県":["高知市","南国市"],"福岡県":["福岡市","北九州市","久留米市","飯塚市","春日市"],"佐賀県":["佐賀市","唐津市"],"長崎県":["長崎市","佐世保市"],"熊本県":["熊本市","八代市"],"大分県":["大分市","別府市"],"宮崎県":["宮崎市","都城市"],"鹿児島県":["鹿児島市","霧島市"],"沖縄県":["那覇市","沖縄市","うるま市","浦添市","宜野湾市"]},"韓国":{"ソウル特別市":["江南区","江東区","江西区","冠岳区","広津区","九老区","城北区","松坡区","永登浦区","麻浦区"],"釜山広域市":["海雲台区","釜山鎮区","東莱区","南区"],"仁川広域市":["南洞区","富平区","延寿区"],"大邱広域市":["中区","東区","寿城区"],"大田広域市":["儒城区","西区"],"光州広域市":["北区","西区"],"蔚山広域市":["南区","中区"],"世宗特別自治市":[],"京畿道":["水原市","城南市","高陽市","龍仁市","富川市","安山市","安養市","南楊州市","華城市","平沢市"],"江原道":["春川市","原州市","江陵市"],"忠清北道":["清州市","忠州市"],"忠清南道":["天安市","牙山市"],"全羅北道":["全州市","群山市","益山市"],"全羅南道":["木浦市","麗水市","順天市"],"慶尚北道":["浦項市","慶州市","亀尾市"],"慶尚南道":["昌原市","金海市","晋州市"],"済州特別自治道":["済州市","西帰浦市"]},"中国":{"北京市":["東城区","西城区","朝陽区","海淀区","豊台区","石景山区","通州区","順義区"],"上海市":["黄浦区","徐匯区","長寧区","静安区","普陀区","浦東新区","閔行区","宝山区"],"天津市":["和平区","河西区","南開区","浜海新区"],"重慶市":["渝中区","江北区","沙坪壩区","南岸区"],"広東省":["広州市","深圳市","珠海市","東莞市","仏山市","中山市","恵州市","汕頭市"],"浙江省":["杭州市","寧波市","温州市","紹興市","嘉興市","金華市"],"江蘇省":["南京市","蘇州市","無錫市","常州市","南通市","徐州市"],"四川省":["成都市","綿陽市","楽山市","宜賓市"],"湖北省":["武漢市","宜昌市","襄陽市"],"湖南省":["長沙市","株洲市","岳陽市"],"福建省":["福州市","廈門市","泉州市"],"山東省":["済南市","青島市","煙台市","濰坊市"],"河南省":["鄭州市","洛陽市","開封市"],"河北省":["石家荘市","唐山市","保定市"],"遼寧省":["瀋陽市","大連市","鞍山市"],"吉林省":["長春市","吉林市"],"黒竜江省":["ハルビン市","大慶市"],"陝西省":["西安市","咸陽市","宝鶏市"],"雲南省":["昆明市","大理市","麗江市"],"海南省":["海口市","三亜市"],"貴州省":["貴陽市","遵義市"],"甘粛省":["蘭州市"],"山西省":["太原市","大同市"],"江西省":["南昌市","九江市"],"安徽省":["合肥市","蕪湖市"],"広西チワン族自治区":["南寧市","桂林市"],"内モンゴル自治区":["フフホト市","包頭市"],"チベット自治区":["ラサ市"],"新疆ウイグル自治区":["ウルムチ市","カシュガル市"],"寧夏回族自治区":["銀川市"],"香港特別行政区":[],"マカオ特別行政区":[],"台湾":["台北市","高雄市","台中市","台南市","新北市","桃園市"]},"モンゴル":{"ウランバートル":["バヤンゴル区","チンゲルテイ区","スフバートル区"],"ダルハン・オール県":["ダルハン市"],"オルホン県":["エルデネト市"]},"タイ":{"バンコク都":["ワタナー区","パトゥムワン区","チャトゥチャック区","バーンラック区","ドゥシット区"],"チェンマイ県":["ムアンチェンマイ"],"プーケット県":["ムアンプーケット"],"チョンブリー県":["パタヤ","シラチャ"],"ノンタブリー県":[],"パトゥムターニー県":[],"サムットプラーカーン県":[],"チェンライ県":["ムアンチェンライ"],"コンケン県":[],"ナコンラーチャシーマー県":[],"ソンクラー県":["ハジャイ"]},"ベトナム":{"ハノイ市":["ホアンキエム区","バーディン区","カウザイ区","タイホー区"],"ホーチミン市":["1区","2区","3区","7区","ビンタン区","タンビン区"],"ダナン市":[],"ハイフォン市":[],"カントー市":[],"フエ市":[],"ニャチャン市":[],"ダラット市":[]},"シンガポール":{"Central":["Orchard","Marina Bay","Bugis","Tanjong Pagar"],"North":["Woodlands","Yishun","Ang Mo Kio"],"East":["Tampines","Bedok","Changi"],"West":["Jurong","Clementi","Bukit Batok"],"North-East":["Sengkang","Punggol","Hougang"]},"マレーシア":{"クアラルンプール":["ブキビンタン","チョウキット","モントキアラ"],"セランゴール州":["ペタリンジャヤ","スバンジャヤ","シャーアラム"],"ペナン州":["ジョージタウン"],"ジョホール州":["ジョホールバル"],"サバ州":["コタキナバル"],"サラワク州":["クチン"]},"インドネシア":{"ジャカルタ首都特別州":["中央ジャカルタ","南ジャカルタ","東ジャカルタ","西ジャカルタ","北ジャカルタ"],"バリ州":["デンパサール","ウブド","クタ"],"西ジャワ州":["バンドン","ボゴール","ブカシ"],"東ジャワ州":["スラバヤ","マラン"],"中部ジャワ州":["スマラン","ジョグジャカルタ"],"北スマトラ州":["メダン"],"南スラウェシ州":["マカッサル"]},"フィリピン":{"マニラ首都圏":["マカティ","マニラ","ケソン","タギッグ","パサイ","パシッグ"],"セブ州":["セブ市","マンダウエ","ラプラプ"],"ダバオ地方":["ダバオ市"],"パンパンガ州":["アンヘレス","サンフェルナンド"],"バタンガス州":[],"ラグナ州":[]},"ミャンマー":{"ヤンゴン管区":["ヤンゴン市"],"マンダレー管区":["マンダレー市"],"ネーピードー連邦直轄地域":[]},"カンボジア":{"プノンペン":[],"シェムリアップ州":["シェムリアップ"],"シハヌークビル":[]},"ラオス":{"ビエンチャン都":["ビエンチャン"],"ルアンパバーン県":["ルアンパバーン"]},"インド":{"デリー首都圏":["ニューデリー","サウスデリー","ノースデリー"],"マハーラーシュトラ州":["ムンバイ","プネー","ナーグプル","ナーシク"],"カルナータカ州":["バンガロール","マイソール"],"タミル・ナードゥ州":["チェンナイ","コインバトール"],"テランガーナ州":["ハイデラバード"],"ケーララ州":["コーチ","トリバンドラム"],"ウッタル・プラデーシュ州":["ラクナウ","カーンプル","アーグラー","バラナシ"],"西ベンガル州":["コルカタ","ダージリン"],"グジャラート州":["アーメダバード","スーラト","バドーダラー"],"ラージャスターン州":["ジャイプル","ジョードプル","ウダイプル"],"パンジャーブ州":["チャンディーガル","アムリトサル"],"ゴア州":["パナジ"]},"スリランカ":{"西部州":["コロンボ","デヒワラ"],"中部州":["キャンディ"],"南部州":["ゴール"]},"ネパール":{"バグマティ州":["カトマンズ","パタン","バクタプル"],"ガンダキ州":["ポカラ"]},"バングラデシュ":{"ダッカ管区":["ダッカ市"],"チッタゴン管区":["チッタゴン市"]},"パキスタン":{"パンジャーブ州":["ラホール","ファイサラーバード"],"シンド州":["カラチ","ハイデラバード"],"イスラマバード首都圏":["イスラマバード"],"カイバル・パクトゥンクワ州":["ペシャーワル"]},"アラブ首長国連邦":{"ドバイ":["ダウンタウン","マリーナ","ジュメイラ","デイラ","バール・ドバイ"],"アブダビ":["アルリーム島","サディヤット島","ヤス島"],"シャルジャ":[],"アジュマーン":[],"ラスアルハイマ":[]},"サウジアラビア":{"リヤド州":["リヤド"],"マッカ州":["ジェッダ","メッカ"],"東部州":["ダンマーム","アルホバル"],"マディーナ州":["メディナ"]},"トルコ":{"イスタンブール県":["ベシクタシュ","カドゥキョイ","ベイオール","ファーティフ","ウスキュダル","シシュリ"],"アンカラ県":["チャンカヤ","ケチオレン"],"イズミル県":["コナック","ブジャ","カルシヤカ"],"アンタルヤ県":["ムラトパシャ","ケメル"],"ブルサ県":[]},"イスラエル":{"テルアビブ地区":["テルアビブ","ラマトガン","ヘルツリヤ"],"エルサレム地区":["エルサレム"],"ハイファ地区":["ハイファ"],"中央地区":["ペタフティクヴァ","リション・レジオン"]},"カタール":{"ドーハ":["ウェストベイ","ザ・パール","アル・サッド"],"アル・ワクラ":[]},"クウェート":{"クウェート市":[],"ハワリ県":[],"ファルワーニーヤ県":[]},"バーレーン":{"マナーマ":[],"ムハッラク":[]},"オマーン":{"マスカット":[],"サラーラ":[]},"ヨルダン":{"アンマン県":["アンマン"],"イルビド県":[],"アカバ県":[]},"レバノン":{"ベイルート":[],"トリポリ":[]},"イラク":{"バグダード県":["バグダード"],"アルビール県":["アルビール"]},"イラン":{"テヘラン州":["テヘラン"],"イスファハーン州":["イスファハーン"],"ファールス州":["シーラーズ"]},"イギリス":{"England":["London","Manchester","Birmingham","Liverpool","Leeds","Bristol","Sheffield","Newcastle","Nottingham","Brighton","Oxford","Cambridge","Bath","York","Canterbury"],"Scotland":["Edinburgh","Glasgow","Aberdeen","Dundee","Inverness"],"Wales":["Cardiff","Swansea","Newport"],"Northern Ireland":["Belfast","Londonderry"]},"フランス":{"イル・ド・フランス":["Paris","Boulogne-Billancourt","Saint-Denis","Versailles","Nanterre"],"プロヴァンス＝アルプ＝コートダジュール":["Marseille","Nice","Aix-en-Provence","Cannes","Toulon"],"オーヴェルニュ＝ローヌ＝アルプ":["Lyon","Grenoble","Saint-Étienne","Clermont-Ferrand","Annecy"],"ヌーヴェル＝アキテーヌ":["Bordeaux","Limoges","Poitiers"],"オクシタニー":["Toulouse","Montpellier","Nîmes"],"ブルターニュ":["Rennes","Brest","Saint-Malo"],"ノルマンディー":["Rouen","Caen","Le Havre"],"グラン・テスト":["Strasbourg","Metz","Nancy","Reims"],"ペイ・ド・ラ・ロワール":["Nantes","Angers","Le Mans"],"オー・ド・フランス":["Lille","Amiens"]},"ドイツ":{"ベルリン":["ミッテ","シャルロッテンブルク","クロイツベルク","プレンツラウアーベルク","ノイケルン","フリードリヒスハイン"],"バイエルン州":["München","Nürnberg","Augsburg","Regensburg","Würzburg"],"バーデン＝ヴュルテンベルク州":["Stuttgart","Karlsruhe","Mannheim","Freiburg","Heidelberg"],"ノルトライン＝ヴェストファーレン州":["Köln","Düsseldorf","Dortmund","Essen","Bonn"],"ヘッセン州":["Frankfurt am Main","Wiesbaden","Kassel","Darmstadt"],"ニーダーザクセン州":["Hannover","Braunschweig","Göttingen","Osnabrück"],"ザクセン州":["Dresden","Leipzig","Chemnitz"],"ハンブルク":["Altona","Eimsbüttel","Wandsbek"],"ブレーメン":[],"ブランデンブルク州":["Potsdam"],"テューリンゲン州":["Erfurt","Jena","Weimar"],"シュレースヴィヒ＝ホルシュタイン州":["Kiel","Lübeck"]},"イタリア":{"ラツィオ州":["Roma","Latina"],"ロンバルディア州":["Milano","Bergamo","Brescia","Como"],"カンパーニア州":["Napoli","Salerno"],"ヴェネト州":["Venezia","Verona","Padova"],"トスカーナ州":["Firenze","Pisa","Siena","Lucca"],"ピエモンテ州":["Torino","Novara"],"エミリア＝ロマーニャ州":["Bologna","Parma","Modena"],"シチリア州":["Palermo","Catania"],"サルデーニャ州":["Cagliari","Sassari"],"プーリア州":["Bari","Lecce"],"リグーリア州":["Genova","Cinque Terre"]},"スペイン":{"マドリード州":["Madrid","Alcalá de Henares","Getafe"],"カタルーニャ州":["Barcelona","Girona","Tarragona"],"アンダルシア州":["Sevilla","Málaga","Granada","Córdoba"],"バレンシア州":["Valencia","Alicante"],"バスク州":["Bilbao","San Sebastián","Vitoria"],"ガリシア州":["Santiago de Compostela","Vigo","A Coruña"],"カナリア諸島":["Las Palmas","Santa Cruz de Tenerife"],"バレアレス諸島":["Palma de Mallorca","Ibiza"]},"ポルトガル":{"リスボン県":["Lisbon","Sintra","Cascais"],"ポルト県":["Porto","Vila Nova de Gaia"],"ファーロ県":["Faro","Albufeira","Lagos"]},"オランダ":{"北ホラント州":["Amsterdam","Haarlem"],"南ホラント州":["Rotterdam","Den Haag","Leiden","Delft"],"ユトレヒト州":["Utrecht"],"北ブラバント州":["Eindhoven","Tilburg","Breda"],"ヘルダーラント州":["Arnhem","Nijmegen"],"フローニンゲン州":["Groningen"]},"ベルギー":{"ブリュッセル首都圏":["Brussels"],"フランダース地域":["Antwerp","Ghent","Bruges","Leuven"],"ワロン地域":["Liège","Namur","Charleroi"]},"スイス":{"チューリッヒ州":["Zürich","Winterthur"],"ベルン州":["Bern","Thun","Biel"],"ジュネーヴ州":["Genève"],"バーゼル＝シュタット準州":["Basel"],"ヴォー州":["Lausanne","Montreux"],"ルツェルン州":["Luzern"],"ティチーノ州":["Lugano","Locarno"]},"オーストリア":{"ウィーン":["1区","2区","3区","4区","7区","8区","9区"],"ザルツブルク州":["Salzburg"],"チロル州":["Innsbruck"],"シュタイアーマルク州":["Graz"],"オーバーエスターライヒ州":["Linz"]},"スウェーデン":{"ストックホルム県":["Stockholm","Solna","Sundbyberg"],"ヴェストラ・イェータランド県":["Göteborg"],"スコーネ県":["Malmö","Lund","Helsingborg"],"ウプサラ県":["Uppsala"]},"ノルウェー":{"オスロ":[],"ヴェストランド県":["Bergen","Stavanger"],"トロンデラーグ県":["Trondheim"]},"デンマーク":{"首都地域":["Copenhagen","Frederiksberg"],"中央ユトランド地域":["Aarhus"],"南デンマーク地域":["Odense"]},"フィンランド":{"ウーシマー県":["Helsinki","Espoo","Vantaa"],"ピルカンマー県":["Tampere"],"南西フィンランド県":["Turku"]},"アイルランド":{"レンスター":["Dublin","Kilkenny"],"マンスター":["Cork","Limerick","Galway"],"コナハト":[],"アルスター":[]},"ポーランド":{"マゾフシェ県":["Warszawa"],"マウォポルスカ県":["Kraków"],"ヴィエルコポルスカ県":["Poznań"],"ポモージェ県":["Gdańsk"],"ドルノシロンスク県":["Wrocław"],"ウッチ県":["Łódź"]},"チェコ":{"プラハ":["プラハ1","プラハ2","プラハ3"],"南モラヴィア州":["Brno"],"モラヴィア＝シレジア州":["Ostrava"]},"ハンガリー":{"ブダペスト":["ブダ","ペスト"],"ペシュト県":[],"バラニャ県":["Pécs"]},"ギリシャ":{"アッティカ":["Athens","Piraeus"],"中央マケドニア":["Thessaloniki"],"クレタ":["Heraklion","Chania"]},"ルーマニア":{"ブカレスト":[],"クルジュ県":["Cluj-Napoca"],"ティミシュ県":["Timișoara"]},"ブルガリア":{"ソフィア市":["Sofia"],"プロヴディフ州":["Plovdiv"]},"クロアチア":{"ザグレブ市":["Zagreb"],"スプリト＝ダルマチア郡":["Split"],"ドゥブロヴニク＝ネレトヴァ郡":["Dubrovnik"]},"セルビア":{"ベオグラード":[],"ヴォイヴォディナ":["Novi Sad"]},"ウクライナ":{"キーウ市":["キーウ"],"リヴィウ州":["リヴィウ"],"オデッサ州":["オデッサ"]},"ロシア":{"モスクワ市":["中央区","北東区","南区","西区"],"サンクトペテルブルク市":["中央区","ペトログラード区"],"ノヴォシビルスク州":["ノヴォシビルスク"],"スヴェルドロフスク州":["エカテリンブルク"],"タタールスタン共和国":["カザン"],"沿海地方":["ウラジオストク"]},"アイスランド":{"首都圏":["Reykjavik","Kópavogur"]},"ルクセンブルク":{"ルクセンブルク":["ルクセンブルク市"]},"エストニア":{"ハリュ県":["Tallinn"],"タルトゥ県":["Tartu"]},"ラトビア":{"リガ":[]},"リトアニア":{"ヴィリニュス県":["Vilnius"],"カウナス県":["Kaunas"]},"スロベニア":{"リュブリャナ":[]},"スロバキア":{"ブラチスラヴァ県":["Bratislava"],"コシツェ県":["Košice"]},"マルタ":{"バレッタ":[],"スリーマ":[],"セント・ジュリアンズ":[]},"キプロス":{"ニコシア地区":["Nicosia"],"リマソル地区":["Limassol"],"パフォス地区":["Paphos"]},"アメリカ合衆国":{"California":["Los Angeles","San Francisco","San Diego","San Jose","Sacramento","Oakland","Irvine","Pasadena","Santa Monica","Berkeley"],"New York":["New York City","Buffalo","Albany","Rochester","Syracuse"],"Texas":["Houston","Austin","Dallas","San Antonio","Fort Worth","El Paso"],"Florida":["Miami","Orlando","Tampa","Jacksonville","Fort Lauderdale","St. Petersburg"],"Illinois":["Chicago","Springfield","Naperville","Evanston"],"Pennsylvania":["Philadelphia","Pittsburgh","Harrisburg"],"Ohio":["Columbus","Cleveland","Cincinnati","Toledo"],"Georgia":["Atlanta","Savannah","Augusta"],"North Carolina":["Charlotte","Raleigh","Durham","Asheville"],"Michigan":["Detroit","Ann Arbor","Grand Rapids"],"New Jersey":["Newark","Jersey City","Princeton","Hoboken"],"Virginia":["Richmond","Virginia Beach","Arlington","Alexandria"],"Washington":["Seattle","Tacoma","Spokane","Bellevue","Redmond"],"Arizona":["Phoenix","Tucson","Scottsdale","Mesa"],"Massachusetts":["Boston","Cambridge","Worcester","Salem"],"Tennessee":["Nashville","Memphis","Knoxville","Chattanooga"],"Indiana":["Indianapolis","Fort Wayne","Bloomington"],"Missouri":["Kansas City","St. Louis","Springfield"],"Maryland":["Baltimore","Bethesda","Annapolis","Rockville"],"Wisconsin":["Milwaukee","Madison","Green Bay"],"Colorado":["Denver","Colorado Springs","Boulder","Fort Collins"],"Minnesota":["Minneapolis","St. Paul","Rochester"],"Oregon":["Portland","Eugene","Salem","Bend"],"Nevada":["Las Vegas","Reno","Henderson"],"Connecticut":["Hartford","New Haven","Stamford"],"Utah":["Salt Lake City","Provo","Park City"],"Hawaii":["Honolulu","Maui","Kailua-Kona"],"Louisiana":["New Orleans","Baton Rouge"],"District of Columbia":["Washington DC"]},"カナダ":{"Quebec":["Montreal","Quebec City","Laval","Gatineau","Sherbrooke","Trois-Rivières","Longueuil"],"Ontario":["Toronto","Ottawa","Mississauga","Hamilton","Brampton","London","Markham","Vaughan","Kitchener","Windsor"],"British Columbia":["Vancouver","Victoria","Burnaby","Surrey","Richmond","Kelowna","Nanaimo"],"Alberta":["Calgary","Edmonton","Red Deer","Lethbridge","Banff"],"Manitoba":["Winnipeg","Brandon"],"Saskatchewan":["Saskatoon","Regina"],"Nova Scotia":["Halifax","Sydney"],"New Brunswick":["Fredericton","Moncton","Saint John"],"Newfoundland and Labrador":["St. John's"],"Prince Edward Island":["Charlottetown"]},"メキシコ":{"メキシコシティ":["コヨアカン","ベニート・フアレス","クアウテモック","ミゲル・イダルゴ"],"ハリスコ州":["グアダラハラ","プエルトバジャルタ"],"ヌエボレオン州":["モンテレイ"],"キンタナ・ロー州":["カンクン","プラヤ・デル・カルメン"],"ユカタン州":["メリダ"],"バハ・カリフォルニア州":["ティファナ","エンセナーダ"]},"ブラジル":{"サンパウロ州":["São Paulo","Campinas","Santos","Guarulhos"],"リオデジャネイロ州":["Rio de Janeiro","Niterói"],"ミナスジェライス州":["Belo Horizonte","Ouro Preto"],"バイーア州":["Salvador"],"連邦直轄区":["Brasília"],"パラナ州":["Curitiba"],"リオグランデ・ド・スル州":["Porto Alegre"],"ペルナンブーコ州":["Recife"],"セアラー州":["Fortaleza"],"アマゾナス州":["Manaus"]},"アルゼンチン":{"ブエノスアイレス自治市":["パレルモ","レコレータ","サンテルモ","ベルグラノ"],"ブエノスアイレス州":["ラプラタ","マルデルプラタ"],"コルドバ州":["Córdoba"],"メンドーサ州":["Mendoza"],"サンタフェ州":["Rosario"]},"チリ":{"サンティアゴ首都州":["Santiago","Providencia","Las Condes"],"バルパライソ州":["Valparaíso","Viña del Mar"]},"コロンビア":{"ボゴタ首都地区":["Bogotá"],"アンティオキア県":["Medellín"],"バジェ・デル・カウカ県":["Cali"]},"ペルー":{"リマ県":["Lima","Miraflores","San Isidro"],"クスコ県":["Cusco"],"アレキパ県":["Arequipa"]},"エクアドル":{"ピチンチャ県":["Quito"],"グアヤス県":["Guayaquil"]},"ウルグアイ":{"モンテビデオ県":["Montevideo"]},"パラグアイ":{"アスンシオン":[]},"オーストラリア":{"New South Wales":["Sydney","Newcastle","Wollongong","Byron Bay","Blue Mountains"],"Victoria":["Melbourne","Geelong","Ballarat","Bendigo"],"Queensland":["Brisbane","Gold Coast","Cairns","Sunshine Coast","Townsville"],"Western Australia":["Perth","Fremantle","Margaret River"],"South Australia":["Adelaide","Barossa Valley"],"Tasmania":["Hobart","Launceston"],"Australian Capital Territory":["Canberra"],"Northern Territory":["Darwin","Alice Springs"]},"ニュージーランド":{"オークランド地方":["Auckland","North Shore","Manukau"],"ウェリントン地方":["Wellington","Lower Hutt"],"カンタベリー地方":["Christchurch"],"オタゴ地方":["Dunedin","Queenstown"],"ワイカト地方":["Hamilton"],"ベイ・オブ・プレンティ地方":["Tauranga","Rotorua"]},"フィジー":{"スバ":[],"ナンディ":[]},"南アフリカ":{"ハウテン州":["Johannesburg","Pretoria","Sandton"],"西ケープ州":["Cape Town","Stellenbosch"],"クワズールー・ナタール州":["Durban","Pietermaritzburg"],"東ケープ州":["Port Elizabeth"]},"エジプト":{"カイロ県":["Cairo","Giza"],"アレクサンドリア県":["Alexandria"],"紅海県":["Hurghada"]},"ケニア":{"ナイロビ県":["Nairobi"],"モンバサ県":["Mombasa"]},"ナイジェリア":{"ラゴス州":["Lagos","Ikeja"],"連邦首都地区":["Abuja"]},"モロッコ":{"カサブランカ＝セタット地方":["Casablanca"],"ラバト＝サレ＝ケニトラ地方":["Rabat"],"マラケシュ＝サフィ地方":["Marrakech"]},"ガーナ":{"グレーター・アクラ州":["Accra"]},"タンザニア":{"ダルエスサラーム州":["Dar es Salaam"]},"エチオピア":{"アディスアベバ特別市":["Addis Ababa"]},"チュニジア":{"チュニス県":["Tunis"]},"コスタリカ":{"サンホセ州":["San José"]},"パナマ":{"パナマ県":["Panama City"]},"ジャマイカ":{"キングストン教区":["Kingston"]},"プエルトリコ":{"サンフアン":[]},"カザフスタン":{"アルマトイ":[],"アスタナ":[]},"ウズベキスタン":{"タシケント市":["Tashkent"],"サマルカンド州":["Samarkand"]},"ジョージア":{"トビリシ":[],"バトゥミ":[]}};
+
+function mergeAreaData(dbData) {
+  // 内蔵データをコピー
+  countryAreaMap = {};
+  Object.keys(BUILTIN_AREAS).forEach(function(c) {
+    countryAreaMap[c] = {};
+    Object.keys(BUILTIN_AREAS[c]).forEach(function(a) {
+      countryAreaMap[c][a] = BUILTIN_AREAS[c][a].slice();
+    });
+  });
+  // DBデータをマージ
+  if (Array.isArray(dbData)) {
+    dbData.forEach(function(f) {
+      var c = (f.country || '日本').trim();
+      var a = (f.area || '').trim();
+      var d = (f.area_detail || '').trim();
+      if (!c) return;
+      if (!countryAreaMap[c]) countryAreaMap[c] = {};
+      if (a && !countryAreaMap[c][a]) countryAreaMap[c][a] = [];
+      if (a && d && countryAreaMap[c][a].indexOf(d) === -1) countryAreaMap[c][a].push(d);
+    });
+  }
+  // ソート
+  Object.keys(countryAreaMap).forEach(function(c) {
+    Object.keys(countryAreaMap[c]).forEach(function(a) { countryAreaMap[c][a].sort(); });
+  });
+}
+
+async function loadAreaData() {
+  try {
+    var res1 = await supaFetch('/rest/v1/pet_families?select=country,area,area_detail');
+    var res2 = await supaFetch('/rest/v1/openchats?select=country,area,area_detail');
+    var data1 = await res1.json();
+    var data2 = await res2.json();
+    var allData = [].concat(Array.isArray(data1)?data1:[]).concat(Array.isArray(data2)?data2:[]);
+    mergeAreaData(allData);
+  } catch(e) {
+    console.error('loadAreaData error:', e);
+    mergeAreaData([]);
+  }
+}
+
+function populateCountrySelect(selectedCountry) {
+  var el = document.getElementById('ocCountry');
+  var html = '';
+  var countries = Object.keys(countryAreaMap).sort(function(a,b) {
+    if (a === '日本') return -1;
+    if (b === '日本') return 1;
+    return a.localeCompare(b);
+  });
+  countries.forEach(function(c) {
+    var sel = (c === selectedCountry) ? ' selected' : '';
+    html += '<option value="'+escapeHtml(c)+'"'+sel+'>'+escapeHtml(c)+'</option>';
+  });
+  el.innerHTML = html;
+}
+
+function onOcCountryChange() {
+  var country = document.getElementById('ocCountry').value;
+  populateAreaSelect(country, '', '');
+}
+
+function populateAreaSelect(country, selectedArea, selectedDetail) {
+  var areaEl = document.getElementById('ocArea');
+  var areas = countryAreaMap[country] || {};
+  var html = '<option value="">選択してください</option>';
+  Object.keys(areas).sort().forEach(function(a) {
+    var sel = (a === selectedArea) ? ' selected' : '';
+    html += '<option value="'+escapeHtml(a)+'"'+sel+'>'+escapeHtml(a)+'</option>';
+  });
+  areaEl.innerHTML = html;
+  updateOcAreaDetail(selectedDetail);
+}
+
+function updateOcAreaDetail(preselect) {
+  var country = document.getElementById('ocCountry').value || '日本';
+  var area = document.getElementById('ocArea').value;
+  var detailEl = document.getElementById('ocAreaDetail');
+  var html = '<option value="">選択してください</option>';
+  if (area && countryAreaMap[country] && countryAreaMap[country][area]) {
+    countryAreaMap[country][area].forEach(function(d) {
+      var sel = (d === preselect) ? ' selected' : '';
+      html += '<option value="'+escapeHtml(d)+'"'+sel+'>'+escapeHtml(d)+'</option>';
+    });
+  }
+  detailEl.innerHTML = html;
+}
+
+function showOcForm(editData) {
+  document.getElementById('ocFormWrap').style.display = 'block';
+  if (editData) {
+    document.getElementById('ocFormTitle').textContent = '✏️ OpenChat編集 (ID:'+editData.id+')';
+    document.getElementById('ocEditId').value = editData.id;
+    document.getElementById('ocName').value = editData.name || '';
+    document.getElementById('ocUrl').value = editData.url || '';
+    populateCountrySelect(editData.country || '日本');
+    populateAreaSelect(editData.country || '日本', editData.area || '', editData.area_detail || '');
+    document.getElementById('ocMembers').value = editData.member_count || 0;
+    document.getElementById('ocNotes').value = editData.notes || '';
+    document.getElementById('ocDesc').value = editData.description || '';
+    document.getElementById('ocPhase').value = editData.phase || 'seed';
+    document.getElementById('ocLeader').value = editData.leader_name || '';
+  } else {
+    document.getElementById('ocFormTitle').textContent = '💬 新規OpenChat登録';
+    document.getElementById('ocEditId').value = '';
+    ['ocName','ocUrl','ocMembers','ocNotes','ocDesc','ocLeader'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('ocPhase').value = 'seed';
+    populateCountrySelect('日本');
+    populateAreaSelect('日本', '', '');
+  }
+}
+
+function hideOcForm() {
+  document.getElementById('ocFormWrap').style.display = 'none';
+}
+
+async function loadOcList() {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var container = document.getElementById('ocListContainer');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
+
+  try {
+    // エリアデータを先にロード
+    await loadAreaData();
+
+    var res = await supaFetch('/rest/v1/openchats?order=created_at.desc');
+    var data = await res.json();
+    if (!Array.isArray(data)) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
+    allOpenchats = data;
+    document.getElementById('badge-openchats').textContent = data.length;
+
+    // 各OpenChatの紐づけ家族数を取得
+    var famRes = await supaFetch('/rest/v1/pet_families?select=openchat_id');
+    var famData = await famRes.json();
+    var bindCounts = {};
+    var totalBound = 0;
+    if (Array.isArray(famData)) {
+      famData.forEach(function(f) {
+        if (f.openchat_id) { bindCounts[f.openchat_id] = (bindCounts[f.openchat_id]||0) + 1; totalBound++; }
+      });
+    }
+
+    // KPI stats
+    var today = new Date().toISOString().substring(0,10);
+    var totalMembers = 0, reported = 0, pending = 0;
+    data.forEach(function(oc) {
+      totalMembers += (oc.member_count || 0);
+      if (oc.last_report_at && oc.last_report_at.substring(0,10) >= today) reported++;
+      else pending++;
+    });
+    document.getElementById('oc-stat-total').textContent = data.length;
+    document.getElementById('oc-stat-members').textContent = totalMembers;
+    document.getElementById('oc-stat-reported').textContent = reported;
+    document.getElementById('oc-stat-pending').textContent = pending;
+    document.getElementById('oc-stat-families').textContent = totalBound;
+
+    renderOcList(data, bindCounts);
+  } catch(e) { container.innerHTML='<div class="empty"><div class="icon">❌</div><p>'+e.message+'</p></div>'; }
+}
+
+function renderOcList(list, bindCounts) {
+  if (list.length === 0) {
+    document.getElementById('ocListContainer').innerHTML='<div class="empty"><div class="icon">📭</div><p>OpenChatが登録されていません</p></div>';
+    return;
+  }
+  var phases = {seed:'🌱 作成',nurture:'🌿 育成',selfrun:'🌳 自走',split:'🔀 分割検討',archived:'📦 終了'};
+  var phaseColors = {seed:'#E0F2FE;color:#0369A1',nurture:'#E8F8ED;color:#05A847',selfrun:'#FFF8EE;color:#B8860B',split:'#FFF0F2;color:#D03A50',archived:'#F3F4F6;color:#6B7280'};
+  var today = new Date().toISOString().substring(0,10);
+  var html = '';
+  list.forEach(function(oc){
+    var binds = bindCounts[oc.id] || 0;
+    var phase = oc.phase || 'seed';
+    var repOk = oc.last_report_at && oc.last_report_at.substring(0,10) >= today;
+    html += '<div class="quota-family-card" data-name="'+escapeHtml(oc.name||'')+'" data-area="'+escapeHtml(oc.area||'')+'" data-country="'+escapeHtml(oc.country||'')+'">';
+
+    // Header
+    html += '<div class="quota-family-header">';
+    html += '<span class="code" style="color:var(--teal-d);">ID:'+oc.id+'</span>';
+    html += '<span class="pets" style="font-size:14px;">💬 '+escapeHtml(oc.name)+'</span>';
+    html += '<span style="font-size:10px;font-weight:700;padding:2px 10px;border-radius:6px;background:'+(phaseColors[phase]||'')+'">'+(phases[phase]||phase)+'</span>';
+    html += '<span class="area">🌏 '+escapeHtml(oc.country||'日本')+' 📍 '+escapeHtml((oc.area||'')+(oc.area_detail?' '+oc.area_detail:''))+'</span>';
+    html += '<span style="font-size:11px;background:#DBEAFE;color:#1E40AF;padding:2px 10px;border-radius:6px;font-weight:600;">👥 '+oc.member_count+'人</span>';
+    html += '<span style="font-size:11px;background:var(--teal-l);color:var(--teal-d);padding:2px 10px;border-radius:6px;font-weight:600;">🏠 '+binds+'家族</span>';
+    html += '</div>';
+
+    // Body: Details + Operational Status
+    html += '<div style="padding:12px 16px;">';
+
+    // Operational status row
+    html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">';
+    html += '<span style="font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600;'+(repOk?'background:#DCFCE7;color:#166534;':'background:#FEF3C7;color:#92400E;')+'">'+(repOk?'✅ レポート済':'⚠️ 未レポート')+'</span>';
+    var lastTopic = oc.last_topic_at ? oc.last_topic_at.substring(0,10) : null;
+    html += '<span style="font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600;background:#F0F4FF;color:#3B4C96;">💬 話題: '+(lastTopic||'未投稿')+'</span>';
+    if (oc.leader_name) html += '<span style="font-size:11px;padding:3px 10px;border-radius:6px;font-weight:600;background:#FEF3C7;color:#92400E;">🌟 '+escapeHtml(oc.leader_name)+'</span>';
+    html += '</div>';
+
+    if (oc.description) html += '<div style="font-size:12px;color:var(--s500);margin-bottom:6px;line-height:1.6;">'+escapeHtml(oc.description)+'</div>';
+    if (oc.url) html += '<div style="font-size:11px;margin-bottom:4px;"><span style="color:var(--s400);">URL:</span> <a href="'+escapeHtml(oc.url)+'" target="_blank" style="color:var(--teal-d);font-family:\'JetBrains Mono\',monospace;word-break:break-all;">'+escapeHtml(oc.url)+'</a></div>';
+    if (oc.notes) html += '<div style="font-size:11px;color:var(--s400);">📝 '+escapeHtml(oc.notes)+'</div>';
+    html += '</div>';
+
+    // Actions
+    html += '<div style="padding:8px 16px 12px;border-top:1px solid var(--s100);display:flex;gap:8px;flex-wrap:wrap;">';
+    html += '<button class="btn btn-outline btn-sm" onclick=\'showOcForm('+JSON.stringify(oc).replace(/'/g,"\\'")+')\'> ✏️ 編集</button>';
+    if (oc.url) html += '<a href="'+escapeHtml(oc.url)+'" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none;">🔗 LINEで開く</a>';
+    if (!repOk) html += '<button class="btn btn-primary btn-sm" onclick="quickPostReport('+oc.id+')">📈 レポート済</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="quickPostTopic('+oc.id+')">💬 話題投稿済</button>';
+    html += '<button class="btn btn-danger btn-sm" style="margin-left:auto;" onclick="deleteOc('+oc.id+',\''+escapeHtml(oc.name)+'\')">🗑️ 削除</button>';
+    html += '</div>';
+    html += '</div>';
+  });
+  document.getElementById('ocListContainer').innerHTML = html;
+}
+
+async function quickPostTopic(ocId) {
+  if (!connected) return;
+  try {
+    await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:ocId,post_type:'topic',content:'話題投稿',posted_by:'管理者'})});
+    await supaPatch('openchats','id=eq.'+ocId,{last_topic_at:new Date().toISOString()});
+    toast('話題投稿を記録しました','ok');
+    loadOcList();
+  } catch(e) { toast('エラー: '+e.message,'err'); }
+}
+
+async function saveOcEntry() {
+  var name = document.getElementById('ocName').value.trim();
+  if (!name) { toast('グループ名は必須です','err'); return; }
+  var url = document.getElementById('ocUrl').value.trim();
+  if (url && !url.startsWith('https://')) { toast('URLは https:// で始めてください','err'); return; }
+
+  var payload = {
+    name: name,
+    description: document.getElementById('ocDesc').value.trim() || null,
+    country: document.getElementById('ocCountry').value.trim() || '日本',
+    area: document.getElementById('ocArea').value.trim() || null,
+    area_detail: document.getElementById('ocAreaDetail').value.trim() || null,
+    member_count: parseInt(document.getElementById('ocMembers').value) || 0,
+    url: url || null,
+    notes: document.getElementById('ocNotes').value.trim() || null,
+    phase: document.getElementById('ocPhase').value || 'seed',
+    leader_name: document.getElementById('ocLeader').value.trim() || null
+  };
+
+  var editId = document.getElementById('ocEditId').value;
+
+  try {
+    var res;
+    if (editId) {
+      res = await supaPatch('openchats', 'id=eq.' + editId, payload);
+    } else {
+      res = await fetch(SUPABASE_URL + '/rest/v1/openchats', {
+        method: 'POST',
+        headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
+        body: JSON.stringify(payload)
+      });
+    }
+    if (res.ok) {
+      toast(editId ? 'OpenChatを更新しました' : 'OpenChatを追加しました', 'ok');
+      hideOcForm();
+      loadOcList();
+    } else {
+      toast('エラー: ' + await res.text(), 'err');
+    }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+async function deleteOc(id, name) {
+  if (!confirm('「'+name+'」を削除しますか？\n紐づけ中の家族は自動的に解除されます。')) return;
+  try {
+    var res = await fetch(SUPABASE_URL + '/rest/v1/openchats?id=eq.' + id, {
+      method: 'DELETE',
+      headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Prefer':'return=minimal' }
+    });
+    if (res.ok) {
+      toast('「'+name+'」を削除しました', 'ok');
+      loadOcList();
+    } else { toast('エラー: ' + await res.text(), 'err'); }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+function filterOcList() {
+  var q = (document.getElementById('ocListSearch').value || '').toLowerCase();
+  document.querySelectorAll('#ocListContainer .quota-family-card').forEach(function(card) {
+    var name = (card.getAttribute('data-name')||'').toLowerCase();
+    var area = (card.getAttribute('data-area')||'').toLowerCase();
+    var country = (card.getAttribute('data-country')||'').toLowerCase();
+    card.style.display = (!q || name.indexOf(q)!==-1 || area.indexOf(q)!==-1 || country.indexOf(q)!==-1) ? '' : 'none';
+  });
+}
+
+// ═══ 家族 × OpenChat紐づけ ═══
+async function loadOcBind() {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var container = document.getElementById('bindList');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
+
+  try {
+    // 家族一覧
+    var famRes = await supaFetch('/rest/v1/pet_families?select=family_code,owner_name,pet_names,country,area,area_detail,openchat_id&order=created_at.desc');
+    var families = await famRes.json();
+    if (!Array.isArray(families)) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
+
+    // OpenChat一覧
+    var ocRes = await supaFetch('/rest/v1/openchats?select=id,name,country,area,area_detail&order=name.asc');
+    var openchats = await ocRes.json();
+    if (!Array.isArray(openchats)) openchats = [];
+
+    var linked = families.filter(function(f){ return f.openchat_id; }).length;
+    document.getElementById('bind-total').textContent = families.length;
+    document.getElementById('bind-linked').textContent = linked;
+    document.getElementById('bind-unlinked').textContent = families.length - linked;
+
+    renderBindList(families, openchats);
+  } catch(e) { container.innerHTML='<div class="empty"><div class="icon">❌</div><p>'+e.message+'</p></div>'; }
+}
+
+function renderBindList(families, openchats) {
+  var html = '';
+  families.forEach(function(f){
+    var code = f.family_code;
+    var hasLink = f.openchat_id ? true : false;
+    var linkedOc = null;
+    if (hasLink) {
+      openchats.forEach(function(oc){ if (oc.id === f.openchat_id) linkedOc = oc; });
+    }
+
+    // 地域マッチング: 同国＋同エリアのOpenChatを優先表示
+    var fCountry = (f.country || '日本').trim();
+    var fArea = (f.area || '').trim();
+    var fDetail = (f.area_detail || '').trim();
+    var matched = [];
+    var sameCountry = [];
+    var others = [];
+    openchats.forEach(function(oc) {
+      var ocCountry = (oc.country || '日本').trim();
+      var ocArea = (oc.area || '').trim();
+      if (fCountry === ocCountry && fArea && ocArea && fArea === ocArea) {
+        matched.push(oc);
+      } else if (fCountry === ocCountry) {
+        sameCountry.push(oc);
+      } else {
+        others.push(oc);
+      }
+    });
+
+    // セレクトオプション生成（同エリア→同国→その他）
+    var optHtml = '<option value="">— 未設定 —</option>';
+    if (matched.length > 0) {
+      optHtml += '<optgroup label="⭐ '+escapeHtml(fCountry+' '+fArea+(fDetail?' '+fDetail:''))+'（同エリア）">';
+      matched.forEach(function(oc) {
+        var label = oc.name + (oc.area_detail ? ' ('+oc.area_detail+')' : '');
+        var sel = (f.openchat_id === oc.id) ? ' selected' : '';
+        optHtml += '<option value="'+oc.id+'"'+sel+'>⭐ '+escapeHtml(label)+'</option>';
+      });
+      optHtml += '</optgroup>';
+    }
+    if (sameCountry.length > 0) {
+      optHtml += '<optgroup label="🌏 '+escapeHtml(fCountry)+'（他エリア）">';
+      sameCountry.forEach(function(oc) {
+        var label = oc.name + ' (' + (oc.area||'未設定') + (oc.area_detail?' '+oc.area_detail:'') + ')';
+        var sel = (f.openchat_id === oc.id) ? ' selected' : '';
+        optHtml += '<option value="'+oc.id+'"'+sel+'>'+escapeHtml(label)+'</option>';
+      });
+      optHtml += '</optgroup>';
+    }
+    if (others.length > 0) {
+      optHtml += '<optgroup label="🌐 その他の国">';
+      others.forEach(function(oc) {
+        var label = oc.name + ' (' + (oc.country||'') + ' ' + (oc.area||'') + ')';
+        var sel = (f.openchat_id === oc.id) ? ' selected' : '';
+        optHtml += '<option value="'+oc.id+'"'+sel+'>'+escapeHtml(label)+'</option>';
+      });
+      optHtml += '</optgroup>';
+    }
+
+    html += '<div class="quota-family-card" data-code="'+escapeHtml(code)+'" data-pets="'+escapeHtml(f.pet_names||'')+'" data-bind="'+(hasLink?'linked':'unlinked')+'">';
+    html += '<div class="quota-family-header">';
+    html += '<span class="code">'+escapeHtml(code)+'</span>';
+    html += '<span class="pets">🐾 '+escapeHtml(f.pet_names||'')+' <span style="font-size:11px;color:var(--s400);font-weight:400;">（'+escapeHtml(f.owner_name||'')+'）</span></span>';
+    html += '<span class="area">🌏 '+escapeHtml(fCountry)+' 📍 '+escapeHtml((f.area||'')+' '+(f.area_detail||''))+'</span>';
+    if (hasLink && linkedOc) {
+      html += '<span style="font-size:11px;background:#DCFCE7;color:#166534;padding:2px 10px;border-radius:6px;font-weight:600;">✅ '+escapeHtml(linkedOc.name)+'</span>';
+    } else if (hasLink) {
+      html += '<span style="font-size:11px;background:#FEF3C7;color:#92400E;padding:2px 10px;border-radius:6px;font-weight:600;">⚠️ ID:'+f.openchat_id+'（削除済み?）</span>';
+    } else if (matched.length > 0) {
+      html += '<span style="font-size:11px;background:#DBEAFE;color:#1E40AF;padding:2px 10px;border-radius:6px;font-weight:600;">💡 '+matched.length+'件おすすめ</span>';
+    } else {
+      html += '<span style="font-size:11px;background:var(--s100);color:var(--s400);padding:2px 10px;border-radius:6px;font-weight:600;">未設定</span>';
+    }
+    html += '</div>';
+
+    html += '<div style="padding:12px 16px;display:flex;gap:8px;align-items:center;">';
+    html += '<span style="font-size:12px;font-weight:700;color:var(--s500);white-space:nowrap;">💬 OpenChat</span>';
+    html += '<select id="bind_'+code+'" style="flex:1;padding:8px 12px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;background:var(--card);">';
+    html += optHtml;
+    html += '</select>';
+    html += '<button class="btn btn-primary btn-sm" onclick="saveBind(\''+escapeHtml(code)+'\')">💾 保存</button>';
+    if (hasLink) {
+      html += '<button class="btn btn-outline btn-sm" onclick="unbind(\''+escapeHtml(code)+'\')">解除</button>';
+    }
+    html += '</div>';
+    html += '</div>';
+  });
+
+  document.getElementById('bindList').innerHTML = html || '<div class="empty"><div class="icon">📭</div><p>データがありません</p></div>';
+}
+
+async function saveBind(code) {
+  var el = document.getElementById('bind_' + code);
+  if (!el) return;
+  var ocId = el.value ? parseInt(el.value) : null;
+
+  try {
+    var res = await supaPatch('pet_families', 'family_code=eq.' + encodeURIComponent(code), {
+      openchat_id: ocId
+    });
+    if (res.ok) {
+      toast(code + ' のOpenChatを' + (ocId ? '紐づけ' : '解除') + 'しました', 'ok');
+      loadOcBind();
+    } else {
+      toast('エラー: ' + await res.text(), 'err');
+    }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+async function unbind(code) {
+  try {
+    var res = await supaPatch('pet_families', 'family_code=eq.' + encodeURIComponent(code), {
+      openchat_id: null
+    });
+    if (res.ok) {
+      toast(code + ' のOpenChat紐づけを解除しました', 'ok');
+      loadOcBind();
+    } else {
+      toast('エラー: ' + await res.text(), 'err');
+    }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+function filterBind() {
+  var q = (document.getElementById('bindSearch').value || '').toLowerCase();
+  var filter = document.getElementById('bindFilter').value;
+  document.querySelectorAll('#bindList .quota-family-card').forEach(function(card) {
+    var code = (card.getAttribute('data-code')||'').toLowerCase();
+    var pets = (card.getAttribute('data-pets')||'').toLowerCase();
+    var bind = card.getAttribute('data-bind') || '';
+    var matchText = !q || code.indexOf(q)!==-1 || pets.indexOf(q)!==-1;
+    var matchFilter = filter === 'all' || bind === filter;
+    card.style.display = (matchText && matchFilter) ? '' : 'none';
+  });
+}
+
+async function autoBind() {
+  if (!connected) { toast('先に接続してください','err'); return; }
+
+  // 未紐づけ家族を取得
+  var famRes = await supaFetch('/rest/v1/pet_families?select=family_code,country,area,area_detail&openchat_id=is.null');
+  var families = await famRes.json();
+  if (!Array.isArray(families) || families.length === 0) { toast('未紐づけの家族はありません','ok'); return; }
+
+  // OpenChat一覧
+  var ocRes = await supaFetch('/rest/v1/openchats?select=id,country,area,area_detail');
+  var openchats = await ocRes.json();
+  if (!Array.isArray(openchats) || openchats.length === 0) { toast('OpenChatが登録されていません','err'); return; }
+
+  // エリアマッチング（同国 + 同エリア）
+  var count = 0;
+  var promises = [];
+  families.forEach(function(f) {
+    var fCountry = (f.country || '日本').trim();
+    var fArea = (f.area || '').trim();
+    if (!fArea) return;
+    var fDetail = (f.area_detail || '').trim();
+    var bestMatch = null;
+    var bestScore = 0;
+    openchats.forEach(function(oc) {
+      var ocCountry = (oc.country || '日本').trim();
+      var ocArea = (oc.area || '').trim();
+      var ocDetail = (oc.area_detail || '').trim();
+      if (fCountry !== ocCountry) return; // 国が違えばスキップ
+      if (fArea === ocArea) {
+        var score = 1; // 都道府県一致
+        if (fDetail && ocDetail && fDetail === ocDetail) score = 2; // 市区町村も一致
+        if (score > bestScore) { bestMatch = oc; bestScore = score; }
+      }
+    });
+    if (bestMatch) {
+      count++;
+      promises.push(
+        supaPatch('pet_families', 'family_code=eq.' + encodeURIComponent(f.family_code), { openchat_id: bestMatch.id })
+      );
+    }
+  });
+
+  if (count === 0) { toast('マッチするエリアが見つかりませんでした','err'); return; }
+  if (!confirm(count + '件の家族をエリアに基づいて自動紐づけしますか？')) return;
+
+  await Promise.all(promises);
+  toast(count + '件を自動紐づけしました！', 'ok');
+  loadOcBind();
+}
+
+// ═══ OpenChat運営: 日次パネル ═══
+async function loadOcDaily() {
+  if (!connected) return;
+  try {
+    var ocRes = await supaFetch('/rest/v1/openchats?select=id,name,phase,member_count,last_report_at,last_topic_at,url&order=name.asc');
+    var ocs = await ocRes.json();
+    if (!Array.isArray(ocs)) ocs = [];
+    document.getElementById('od-groups').textContent = ocs.length;
+
+    // 今日の投稿数
+    var today = new Date().toISOString().substring(0,10);
+    var postRes = await supaFetch('/rest/v1/oc_post_log?select=id&posted_at=gte.'+today+'T00:00:00');
+    var posts = await postRes.json();
+    document.getElementById('od-today-posts').textContent = Array.isArray(posts) ? posts.length : 0;
+
+    // 未レポート群（今日まだレポートしてない群）
+    var pending = 0;
+    ocs.forEach(function(oc) {
+      if (!oc.last_report_at || oc.last_report_at.substring(0,10) < today) pending++;
+    });
+    document.getElementById('od-pending').textContent = pending;
+
+    // モデレーション件数
+    var modRes = await supaFetch('/rest/v1/oc_mod_log?select=id&reported_at=gte.'+today+'T00:00:00');
+    var mods = await modRes.json();
+    document.getElementById('od-mod').textContent = Array.isArray(mods) ? mods.length : 0;
+
+    // グループ別ステータス
+    renderDailyStatus(ocs, today);
+  } catch(e) {}
+}
+
+function renderDailyStatus(ocs, today) {
+  if (ocs.length === 0) {
+    document.getElementById('ocDailyStatus').innerHTML = '<div class="empty"><div class="icon">📭</div><p>OpenChatが登録されていません</p></div>';
+    return;
+  }
+  var phases = {seed:'🌱 作成',nurture:'🌿 育成',selfrun:'🌳 自走',split:'🔀 分割検討',archived:'📦 終了'};
+  var phaseColors = {seed:'#E0F2FE',nurture:'#E8F8ED',selfrun:'#FFF8EE',split:'#FFF0F2',archived:'#F3F4F6'};
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+  html += '<thead><tr><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);">グループ</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);">フェーズ</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);">人数</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);">最終レポート</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);">最終話題</th><th style="padding:8px 12px;text-align:left;background:var(--s50);border-bottom:2px solid var(--s200);">アクション</th></tr></thead><tbody>';
+  ocs.forEach(function(oc) {
+    var phase = oc.phase || 'seed';
+    var repOk = oc.last_report_at && oc.last_report_at.substring(0,10) >= today;
+    var lastRep = oc.last_report_at ? oc.last_report_at.substring(0,10) : '—';
+    var lastTop = oc.last_topic_at ? oc.last_topic_at.substring(0,10) : '—';
+    html += '<tr>';
+    html += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);"><strong>'+escapeHtml(oc.name)+'</strong></td>';
+    html += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);"><span style="background:'+phaseColors[phase]+';padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;">'+(phases[phase]||phase)+'</span></td>';
+    html += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);">'+oc.member_count+'</td>';
+    html += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);">'+(repOk ? '<span style="color:var(--teal-d);font-weight:700;">✅ '+lastRep+'</span>' : '<span style="color:var(--rose);font-weight:700;">⚠️ '+lastRep+'</span>')+'</td>';
+    html += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);">'+lastTop+'</td>';
+    html += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);">';
+    if (!repOk) html += '<button class="btn btn-primary btn-sm" onclick="quickPostReport('+oc.id+')">📈 レポート投稿済</button> ';
+    if (oc.url) html += '<a href="'+escapeHtml(oc.url)+'" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none;">🔗 開く</a>';
+    html += '</td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('ocDailyStatus').innerHTML = html;
+}
+
+async function quickPostReport(ocId) {
+  if (!connected) return;
+  try {
+    await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:ocId,post_type:'daily_report',content:'日次レポート投稿',posted_by:'管理者'})});
+    await supaPatch('openchats','id=eq.'+ocId,{last_report_at:new Date().toISOString()});
+    toast('レポート投稿を記録しました','ok');
+    loadOcDaily();
+  } catch(e) { toast('エラー: '+e.message,'err'); }
+}
+
+function toggleOpsCheck(el) {
+  var ck = el.querySelector('.ck');
+  if (ck.classList.contains('done')) { ck.classList.remove('done'); el.classList.remove('is-done'); }
+  else { ck.classList.add('done'); el.classList.add('is-done'); }
+}
+function resetDailyChecks() {
+  document.querySelectorAll('#tab-oc_daily .ck').forEach(function(c){c.classList.remove('done');});
+  document.querySelectorAll('#tab-oc_daily .ops-check').forEach(function(c){c.classList.remove('is-done');});
+}
+
+// ═══ OpenChat運営: テンプレート ═══
+var TMPL_DATA = [
+  {id:'OC-01',title:'日次元気レポート',bg:'#06c755',type:'daily_report',freq:'毎日 8:30',
+    text:'🐾 {date} {area}ペット元気レポート\n\n✅ 今日の元気チェック：{total}匹\n🐕 犬 {dog}匹 ｜ 🐈 猫 {cat}匹 ｜ 🐾 その他 {other}匹\n\n🔥 連続最長：{topPet}（Day {topDays}！）\n🆕 今日の新メンバー：{new}匹\n⚠️ ちょっと心配：{worry}匹（お大事に 💛）\n\nみんな今日も元気で過ごしましょう！'},
+  {id:'OC-02',title:'週間レポート',bg:'#06c755',type:'weekly_report',freq:'毎週月曜 9:00',
+    text:'📊 {area} 週間元気レポート\n{dateRange}\n\n📈 今週の元気率最高日：{bestDay}（{bestRate}%）\n📉 最低日：{worstDay}（{worstRate}%）\n\n🏆 連続打刻ランキング TOP3\n　🥇 {top1}\n　🥈 {top2}\n　🥉 {top3}\n\n🆕 今週の新メンバー：{newWeek}匹\n📊 累計メンバー：{total}匹\n\n今週もみんなで元気を確認しましょう！🐾'},
+  {id:'WC-01',title:'🆕 新メンバー歓迎',bg:'#2ECDA7',type:'welcome',freq:'随時',
+    text:'🐾 〇〇ちゃんの飼い主さん、ようこそ！\n\nPawBonの元気チェックコミュニティへ\nようこそ〜！🎉\n\n毎日の「元気ですか？」で\n〇〇ちゃんの健康を一緒に見守りましょう 💛\n\n気軽に写真やお散歩の話も\nシェアしてくださいね！\n\nよろしくお願いします 🐕✨'},
+  {id:'AW-01',title:'🥉 7日連続達成',bg:'#FFB347',type:'achievement',freq:'達成時',
+    text:'🎉 7日連続達成！\n\n🐾 〇〇ちゃんが\n7日連続で元気チェックを達成しました！\n\n🥉「元気ルーキー」バッジ獲得 ✨\n\n1週間続けるのはすごいこと！\nこの調子で30日を目指しましょう 🔥'},
+  {id:'AW-02',title:'🥈 30日連続達成',bg:'#FF7B54',type:'achievement',freq:'達成時',
+    text:'🎉🎉🎉\n\n㊗️ 30日連続達成！\n\n🐾 〇〇ちゃんが\n30日連続元気チェックを達成しました！\n\n🥈「元気マスター」バッジ獲得 ✨\n\n飼い主さんの毎日の愛情が\n家族に届いています 💌\n\n次の目標は 100日！応援してます 🔥'},
+  {id:'AW-03',title:'🥇 100日連続達成',bg:'#E8475F',type:'achievement',freq:'達成時',
+    text:'🎊🎊🎊🎊🎊\n\n🏆 100日連続達成！！\n\n🐾 〇〇ちゃんが\n100日連続元気チェックを達成！！\n\n🥇「元気レジェンド」バッジ獲得 ✨✨\n\n100日間毎日続けるなんて\n本当にすごいです！！\n\n次はいよいよ 365日…！\n伝説を作りましょう 🌟'},
+  {id:'AW-04',title:'🏅 365日 殿堂入り',bg:'linear-gradient(135deg,#E8475F,#FF7B54)',type:'achievement',freq:'達成時',
+    text:'🏅✨🏅✨🏅✨🏅\n\n👑 365日連続達成\n〜 殿堂入り 〜\n\n🐾 〇〇ちゃんが\n1年間毎日欠かさず\n元気チェックを続けました！！\n\n🏅「殿堂入り」認定 ✨✨✨\n\nPawBonコミュニティの誇りです！\n\n🎁 特別な記念品をご用意しています\n管理者にDMください 💌\n\nおめでとうございます！！🎊🎊🎊'}
+];
+
+var MORNING_GREETINGS = [
+  '☀️ 今日もいいお天気ですね、お散歩日和！','🌸 桜がきれいな季節ですね〜','🌧️ 雨ですが、室内でまったりも良いですよね',
+  '🍂 秋の風が気持ちいい！お散歩が楽しい季節','❄️ 寒くなってきました、防寒対策バッチリですか？',
+  '🌈 雨上がりの虹、見ましたか？','🌤️ 少し雲がありますが過ごしやすい日ですね',
+  '🌞 日差しが強いです。ペットの熱中症に気をつけて！','💨 風が強い日は飛来物に注意ですね','🌙 昨夜は良い月でしたね〜'
+];
+
+function loadTmplTab() {
+  // 投稿先セレクト更新
+  var sel = document.getElementById('tmplTarget');
+  sel.innerHTML = '<option value="">OpenChatを選択...</option>';
+  if (Array.isArray(allOpenchats)) {
+    allOpenchats.forEach(function(oc) {
+      sel.innerHTML += '<option value="'+oc.id+'" data-url="'+(oc.url||'')+'">'+escapeHtml(oc.name)+'</option>';
+    });
+  }
+
+  // テンプレート描画
+  var html = '';
+  TMPL_DATA.forEach(function(t) {
+    html += '<div class="tmpl-card">';
+    html += '<div class="tmpl-head" style="background:'+t.bg+';"><span class="tmpl-id">'+t.id+'</span>'+escapeHtml(t.title)+'<span style="margin-left:auto;font-size:10px;opacity:.8;">'+t.freq+'</span></div>';
+    html += '<div class="tmpl-content" id="tmpl-'+t.id+'">'+escapeHtml(t.text)+'</div>';
+    html += '<div class="tmpl-foot">';
+    html += '<button class="btn btn-primary btn-sm" onclick="copyText(\'tmpl-'+t.id+'\')">📋 コピー</button>';
+    html += '<button class="btn btn-outline btn-sm" onclick="logPost(\''+t.type+'\',\''+t.id+'\')">✅ 投稿済</button>';
+    html += '</div></div>';
+  });
+
+  // 朝の一言
+  html += '<div class="tmpl-card">';
+  html += '<div class="tmpl-head" style="background:var(--s500);"><span class="tmpl-id">MISC</span>🌅 朝の一言（ランダム）</div>';
+  var rndIdx = Math.floor(Math.random()*MORNING_GREETINGS.length);
+  html += '<div class="tmpl-content" id="tmpl-morning">'+escapeHtml(MORNING_GREETINGS[rndIdx])+'</div>';
+  html += '<div class="tmpl-foot"><button class="btn btn-primary btn-sm" onclick="copyText(\'tmpl-morning\')">📋 コピー</button>';
+  html += '<button class="btn btn-outline btn-sm" onclick="shuffleMorning()">🔄 別の一言</button></div></div>';
+
+  document.getElementById('tmplContainer').innerHTML = html;
+  loadPostLog();
+}
+
+function shuffleMorning() {
+  var idx = Math.floor(Math.random()*MORNING_GREETINGS.length);
+  document.getElementById('tmpl-morning').textContent = MORNING_GREETINGS[idx];
+}
+
+async function onTmplTargetChange() {
+  var sel = document.getElementById('tmplTarget');
+  var opt = sel.options[sel.selectedIndex];
+  var url = opt ? opt.getAttribute('data-url') : '';
+  document.getElementById('tmplOpenLink').style.display = url ? '' : 'none';
+
+  var ocId = sel.value;
+  if (!ocId || !connected) return;
+
+  // 選択したOCの情報
+  var oc = allOpenchats.find(function(o){ return o.id == ocId; });
+  var area = oc ? (oc.area_detail || oc.area || '') : '';
+
+  // このOCに紐づく家族の打刻データ取得
+  var todayStr = new Date().toISOString().substring(0,10);
+  var stats = { total:0, dog:0, cat:0, other:0, worry:0, newToday:0, topPet:'---', topDays:0 };
+
+  try {
+    // OC紐づけ家族を取得
+    var famRes = await supaFetch('/rest/v1/pet_families?openchat_id=eq.'+ocId+'&select=family_code,pet_names,breeds,created_at');
+    var families = await famRes.json();
+    if (!Array.isArray(families)) families = [];
+    var codes = families.map(function(f){ return f.family_code; });
+
+    if (codes.length > 0) {
+      // 今日の打刻を取得
+      var ckRes = await supaFetch('/rest/v1/checkins?checkin_date=eq.'+todayStr+'&family_code=in.('+codes.map(encodeURIComponent).join(',')+')&select=family_code,status,worried_pets');
+      var checkins = await ckRes.json();
+      if (!Array.isArray(checkins)) checkins = [];
+
+      // 重複除外（family_code単位で集計）
+      var checked = {};
+      checkins.forEach(function(c){
+        if (!checked[c.family_code]) {
+          checked[c.family_code] = c;
+          stats.total++;
+          if (c.status === 'worry') stats.worry++;
+        }
+      });
+
+      // 犬猫分類
+      var dogPattern = /犬|ドッグ|テリア|ブル|レトリバー|シェパード|プードル|ハスキー|コーギー|柴|秋田|mix|ダックス|チワワ|ポメラニアン|フレンチ|ゴールデン/i;
+      var catPattern = /猫|キャット|ペルシャ|シャム|ベンガル|スコティッシュ|マンチカン|アメリカンショート|ラグドール/i;
+      families.forEach(function(f){
+        var breed = (f.breeds || '');
+        if (dogPattern.test(breed)) stats.dog++;
+        else if (catPattern.test(breed)) stats.cat++;
+        else stats.other++;
+      });
+
+      // 今日登録の新メンバー
+      families.forEach(function(f){
+        if (f.created_at && f.created_at.substring(0,10) === todayStr) stats.newToday++;
+      });
+
+      // 連続最長を取得
+      try {
+        var streakRes = await supaFetch('/rest/v1/checkins?family_code=in.('+codes.map(encodeURIComponent).join(',')+')&select=family_code,streak_days&order=streak_days.desc.nullslast&limit=1');
+        var streakData = await streakRes.json();
+        if (Array.isArray(streakData) && streakData.length > 0 && streakData[0].streak_days) {
+          var topFam = families.find(function(f){ return f.family_code === streakData[0].family_code; });
+          stats.topPet = topFam ? topFam.pet_names : '---';
+          stats.topDays = streakData[0].streak_days || 0;
+        }
+      } catch(se) {}
+    }
+  } catch(e) {
+    console.error('Template data fetch error:', e);
+  }
+
+  // テンプレート変数を実データで置換
+  var dateStr = todayStr.replace(/-/g, '/');
+  TMPL_DATA.forEach(function(t) {
+    var el = document.getElementById('tmpl-' + t.id);
+    if (!el) return;
+    var text = t.text
+      .replace(/\{date\}/g, dateStr)
+      .replace(/\{area\}/g, area)
+      .replace(/\{total\}/g, stats.total)
+      .replace(/\{dog\}/g, stats.dog)
+      .replace(/\{cat\}/g, stats.cat)
+      .replace(/\{other\}/g, stats.other)
+      .replace(/\{worry\}/g, stats.worry)
+      .replace(/\{new\}/g, stats.newToday)
+      .replace(/\{topPet\}/g, stats.topPet)
+      .replace(/\{topDays\}/g, stats.topDays);
+    el.textContent = text;
+  });
+
+  toast('テンプレートを更新しました ✅', 'ok');
+}
+function openTmplTarget() {
+  var sel = document.getElementById('tmplTarget');
+  var opt = sel.options[sel.selectedIndex];
+  var url = opt ? opt.getAttribute('data-url') : '';
+  if (url) window.open(url,'_blank');
+}
+
+async function logPost(type, tmplId) {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var ocId = document.getElementById('tmplTarget').value;
+  if (!ocId) { toast('投稿先のOpenChatを選択してください','err'); return; }
+  try {
+    await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:parseInt(ocId),post_type:type,content:tmplId+'テンプレートで投稿',posted_by:'管理者'})});
+    // レポート系なら last_report_at 更新
+    if (type==='daily_report'||type==='weekly_report') {
+      await supaPatch('openchats','id=eq.'+ocId,{last_report_at:new Date().toISOString()});
+    }
+    if (type==='topic') {
+      await supaPatch('openchats','id=eq.'+ocId,{last_topic_at:new Date().toISOString()});
+    }
+    toast('投稿ログを記録しました ✅','ok');
+    loadPostLog();
+  } catch(e) { toast('エラー: '+e.message,'err'); }
+}
+
+async function loadPostLog() {
+  if (!connected) return;
+  try {
+    var res = await supaFetch('/rest/v1/oc_post_log?select=*,openchats(name)&order=posted_at.desc&limit=20');
+    var logs = await res.json();
+    if (!Array.isArray(logs) || logs.length === 0) {
+      document.getElementById('postLogList').innerHTML = '<div style="color:var(--s400);font-size:12px;padding:8px;">投稿ログはまだありません</div>';
+      return;
+    }
+    var typeLabels = {daily_report:'📈 日次',weekly_report:'📊 週間',achievement:'🏆 表彰',welcome:'🆕 歓迎',topic:'💬 話題',announcement:'📢 告知',moderation:'🛡️ モデ'};
+    var typeClasses = {daily_report:'ptype-daily',weekly_report:'ptype-weekly',achievement:'ptype-achieve',welcome:'ptype-welcome',topic:'ptype-topic',announcement:'ptype-announce'};
+    var html = '';
+    logs.forEach(function(l) {
+      html += '<div class="post-log-item">';
+      html += '<span class="ptime">'+(l.posted_at?l.posted_at.substring(5,16).replace('T',' '):'')+'</span>';
+      html += '<span class="ptype '+(typeClasses[l.post_type]||'')+'">'+(typeLabels[l.post_type]||l.post_type)+'</span>';
+      html += '<span style="flex:1;">'+escapeHtml(l.openchats?l.openchats.name:'ID:'+l.openchat_id)+'</span>';
+      html += '<span style="color:var(--s400);">'+escapeHtml(l.posted_by||'')+'</span>';
+      html += '</div>';
+    });
+    document.getElementById('postLogList').innerHTML = html;
+  } catch(e) {}
+}
+
+// ═══ OpenChat運営: 話題カレンダー ═══
+var WEEKLY_TOPICS = [
+  {day:1,label:'月曜 MON',topic:'📊 週間レポート',example:'先週のデータと今週の目標。「先週は98%の子が元気でした！今週も頑張ろう」',type:'semi',hasTopic:true},
+  {day:2,label:'火曜 TUE',topic:'— レポートのみ',example:'追加投稿なし。ユーザーの自然な対話を見守る日。',type:'',hasTopic:false},
+  {day:3,label:'水曜 WED',topic:'💬 お散歩トーク',example:'「今日のお散歩はどこ行きましたか？おすすめスポットがあれば教えて！🐕」',type:'manual',hasTopic:true},
+  {day:4,label:'木曜 THU',topic:'— レポートのみ',example:'追加投稿なし。静かに対話を見守る。',type:'',hasTopic:false},
+  {day:5,label:'金曜 FRI',topic:'🎉 週末のお楽しみ',example:'「週末のお出かけ予定ありますか？ドッグラン行く方いるかな？🐾」',type:'manual',hasTopic:true},
+  {day:6,label:'土曜 SAT',topic:'— レポートのみ',example:'お出かけ報告があれば積極的にリアクション。',type:'',hasTopic:false},
+  {day:0,label:'日曜 SUN',topic:'📸 写真タイム',example:'「今週のベストショット、あれば見せて！📸 うちの子はこんな顔してました（笑）」',type:'manual',hasTopic:true}
+];
+
+var TOPIC_STOCK = [
+  {cat:'🌸 季節',text:'桜の季節ですね、お花見散歩した方いますか？',timing:'季節の変わり目'},
+  {cat:'🏥 健康',text:'フィラリア予防の季節ですね！みなさんもう始めましたか？',timing:'春〜夏前'},
+  {cat:'🍽️ フード',text:'おすすめのフードやおやつ、ありますか？うちの子は〇〇が好きです',timing:'いつでも'},
+  {cat:'🎮 遊び',text:'雨の日の室内遊び、みなさんどうしてますか？',timing:'梅雨・雨の日'},
+  {cat:'📍 スポット',text:'おすすめのドッグカフェやドッグランありますか？',timing:'週末前'},
+  {cat:'💤 日常',text:'うちの子の寝顔が面白かったので共有（笑）みなさんの子はどんな寝方？',timing:'いつでも'},
+  {cat:'🎊 記念日',text:'今日は〇〇の日！ペットの〇〇エピソードを教えて',timing:'記念日'},
+  {cat:'📊 投票',text:'犬派？猫派？それとも両方！？今日は大調査の日🐾',timing:'ネタ切れ時'}
+];
+
+function loadCalendar() {
+  var todayDow = new Date().getDay();
+  // 今日のテーマ
+  var todayTopic = null;
+  WEEKLY_TOPICS.forEach(function(t) { if (t.day === todayDow) todayTopic = t; });
+  if (todayTopic) {
+    var content = '<div style="display:flex;gap:12px;align-items:flex-start;">';
+    content += '<span style="font-size:28px;">'+(todayTopic.hasTopic?'💬':'📈')+'</span>';
+    content += '<div><strong style="font-size:15px;">'+todayTopic.topic+'</strong>';
+    content += '<div style="color:var(--s500);margin-top:4px;">'+todayTopic.example+'</div>';
+    if (todayTopic.hasTopic) {
+      content += '<div style="margin-top:8px;"><button class="btn btn-primary btn-sm" onclick="copyTextDirect(\''+todayTopic.example.replace(/'/g,"\\'")+'\')">📋 話題をコピー</button>';
+      content += '<button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="logTopicPost()">✅ 投稿済</button></div>';
+    }
+    content += '</div></div>';
+    document.getElementById('calTodayContent').innerHTML = content;
+    document.getElementById('calTodayTitle').textContent = '📌 今日は' + todayTopic.label + ' — ' + todayTopic.topic;
+  }
+
+  // カレンダーグリッド
+  var gHtml = '';
+  WEEKLY_TOPICS.forEach(function(t) {
+    var isToday = t.day === todayDow;
+    gHtml += '<div class="cal-day '+(t.hasTopic?'has-topic':'')+'" style="'+(isToday?'box-shadow:0 0 0 2px #06c755;':'')+(t.hasTopic?'':'opacity:.7;')+'">';
+    gHtml += '<div class="cal-label">'+(isToday?'👉 ':'')+t.label+'</div>';
+    gHtml += '<div class="cal-topic" style="'+(t.hasTopic?'':'color:var(--s400);')+'">'+t.topic+'</div>';
+    gHtml += '<div class="cal-eg">'+t.example+'</div>';
+    if (t.hasTopic) {
+      gHtml += '<div class="cal-status"><button class="btn btn-outline btn-sm" style="font-size:10px;padding:4px 8px;" onclick="copyTextDirect(\''+t.example.replace(/'/g,"\\'")+'\')">📋コピー</button></div>';
+    }
+    gHtml += '</div>';
+  });
+  document.getElementById('calGrid').innerHTML = gHtml;
+
+  // 話題ストック
+  var sHtml = '';
+  TOPIC_STOCK.forEach(function(t) {
+    sHtml += '<tr><td style="padding:8px 12px;border-bottom:1px solid var(--s100);font-weight:600;">'+t.cat+'</td>';
+    sHtml += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);" id="stock-'+t.cat+'">'+escapeHtml(t.text)+'</td>';
+    sHtml += '<td style="padding:8px 12px;border-bottom:1px solid var(--s100);"><button class="btn btn-outline btn-sm" style="font-size:10px;padding:3px 8px;" onclick="copyTextDirect(\''+t.text.replace(/'/g,"\\'")+'\')">📋</button></td></tr>';
+  });
+  document.getElementById('topicStock').innerHTML = sHtml;
+}
+
+async function logTopicPost() {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var ocId = prompt('投稿先のOpenChat IDを入力（複数の場合はカンマ区切り）:');
+  if (!ocId) return;
+  var ids = ocId.split(',');
+  for (var i=0;i<ids.length;i++) {
+    var id = parseInt(ids[i].trim());
+    if (!id) continue;
+    try {
+      await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:id,post_type:'topic',content:'話題投稿',posted_by:'管理者'})});
+      await supaPatch('openchats','id=eq.'+id,{last_topic_at:new Date().toISOString()});
+    } catch(e) {}
+  }
+  toast('話題投稿を記録しました ✅','ok');
+}
+
+// ═══ OpenChat運営: モデレーション ═══
+function loadModOcSelect() {
+  var sel = document.getElementById('modOc');
+  sel.innerHTML = '<option value="">選択...</option>';
+  if (Array.isArray(allOpenchats)) {
+    allOpenchats.forEach(function(oc) {
+      sel.innerHTML += '<option value="'+oc.id+'">'+escapeHtml(oc.name)+'</option>';
+    });
+  }
+}
+
+async function saveModLog() {
+  if (!connected) { toast('先に接続してください','err'); return; }
+  var ocId = document.getElementById('modOc').value;
+  var sev = document.getElementById('modSev').value;
+  var cat = document.getElementById('modCat').value;
+  var desc = document.getElementById('modDesc').value.trim();
+  var action = document.getElementById('modAction').value.trim();
+  if (!desc) { toast('内容を入力してください','err'); return; }
+  try {
+    await fetch(SUPABASE_URL+'/rest/v1/oc_mod_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:ocId?parseInt(ocId):null,severity:sev,category:cat,description:desc,action_taken:action,reported_by:'管理者'})});
+    toast('モデレーション記録を保存しました','ok');
+    document.getElementById('modDesc').value = '';
+    document.getElementById('modAction').value = '';
+    loadModLog();
+  } catch(e) { toast('エラー: '+e.message,'err'); }
+}
+
+async function loadModLog() {
+  if (!connected) return;
+  try {
+    var res = await supaFetch('/rest/v1/oc_mod_log?select=*,openchats(name)&order=reported_at.desc&limit=20');
+    var logs = await res.json();
+    if (!Array.isArray(logs) || logs.length === 0) {
+      document.getElementById('modLogList').innerHTML = '<div style="color:var(--s400);font-size:12px;">モデレーション履歴なし</div>';
+      return;
+    }
+    var sevIcons = {red:'🔴',yellow:'🟡',info:'🔵'};
+    var sevClass = {red:'sev-red',yellow:'sev-yellow',info:'sev-info'};
+    var html = '';
+    logs.forEach(function(l) {
+      html += '<div class="mod-card '+(sevClass[l.severity]||'')+'">';
+      html += '<div class="mod-head">'+(sevIcons[l.severity]||'')+ ' '+escapeHtml(l.category||'')+'<span style="margin-left:auto;font-weight:400;font-size:10px;color:var(--s400);">'+(l.reported_at?l.reported_at.substring(0,16).replace('T',' '):'')+'</span></div>';
+      html += '<div class="mod-body">';
+      if (l.openchats) html += '<strong>'+escapeHtml(l.openchats.name)+'</strong> — ';
+      html += escapeHtml(l.description||'');
+      if (l.action_taken) html += '<br><span style="color:var(--teal-d);font-weight:600;">対応: '+escapeHtml(l.action_taken)+'</span>';
+      html += '</div></div>';
+    });
+    document.getElementById('modLogList').innerHTML = html;
+  } catch(e) {}
+}
+
+// ═══ マニュアル ═══
+function toggleManual(header) {
+  header.classList.toggle('open');
+  var body = header.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+// ═══ Util: Copy ═══
+function copyText(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var text = el.textContent || el.innerText;
+  navigator.clipboard.writeText(text).then(function(){
+    showCopiedToast();
+  }).catch(function(){
+    var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    showCopiedToast();
+  });
+}
+function copyTextDirect(text) {
+  navigator.clipboard.writeText(text).then(function(){ showCopiedToast(); }).catch(function(){
+    var ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showCopiedToast();
+  });
+}
+function showCopiedToast() {
+  var d=document.createElement('div');d.className='copied-toast';d.textContent='✅ コピーしました！';
+  document.body.appendChild(d);setTimeout(function(){d.remove();},2200);
+}
+
+// ═══ REST Runner ═══
+async function runREST() {
+  var path = document.getElementById('restQuery').value.trim();
+  if (!path) return;
+  var container = document.getElementById('restResult');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>実行中...</div>';
+  try {
+    var res = await supaFetch(path);
+    var data = await res.json();
+    if (!Array.isArray(data)||data.length===0) {
+      container.innerHTML='<div style="padding:12px;color:var(--s400);">結果: 0件</div><pre style="font-size:11px;color:var(--s500);overflow:auto;">'+JSON.stringify(data,null,2)+'</pre>';
+      return;
+    }
+    var cols = Object.keys(data[0]);
+    var html = '<div class="table-scroll"><table><thead><tr>';
+    cols.forEach(function(c){ html+='<th>'+c+'</th>'; });
+    html += '</tr></thead><tbody>';
+    data.forEach(function(row){
+      html += '<tr>';
+      cols.forEach(function(c){ html+='<td>'+escapeHtml(String(row[c]===null?'':row[c]))+'</td>'; });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+  } catch(e) { container.innerHTML='<div style="color:var(--rose);padding:12px;">エラー: '+e.message+'</div>'; }
+}
+
+// ═══ Tab Nav ═══
+document.querySelectorAll('.sidebar-item').forEach(function(item) {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.sidebar-item').forEach(function(i){ i.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+    item.classList.add('active');
+    var tab = item.dataset.tab;
+    document.getElementById('tab-'+tab).classList.add('active');
+    if (connected) {
+      if (tab === 'quota_mgmt') loadQuotaMgmt();
+      else if (tab === 'openchat_list') loadOcList();
+      else if (tab === 'openchat_bind') loadOcBind();
+      else if (tab === 'oc_daily') { loadOcListSilent(); loadOcDaily(); }
+      else if (tab === 'oc_templates') { loadOcListSilent(); loadTmplTab(); }
+      else if (tab === 'oc_calendar') { loadCalendar(); }
+      else if (tab === 'oc_moderation') { loadOcListSilent(); loadModOcSelect(); loadModLog(); }
+      else if (tab === 'oc_manual') { /* static content */ }
+      else if (tab !== 'dashboard' && tab !== 'sql') loadTable(tab);
+    } else {
+      // Static tabs work without connection
+      if (tab === 'oc_calendar') loadCalendar();
+    }
+  });
+});
+
+// silent OC list load for selectors
+async function loadOcListSilent() {
+  if (!connected) return;
+  try {
+    var res = await supaFetch('/rest/v1/openchats?select=id,name,url,area,area_detail,phase,member_count,last_report_at,last_topic_at&order=name.asc');
+    var data = await res.json();
+    if (Array.isArray(data)) allOpenchats = data;
+  } catch(e) {}
+}
+
+// ═══ Util ═══
+function escapeHtml(str) { var d=document.createElement('div'); d.textContent=str; return d.innerHTML; }
+function toast(msg,type) { var t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+(type||'ok'); setTimeout(function(){ t.className='toast'; },3000); }
+
+window.addEventListener('DOMContentLoaded', function() {
+  var u=localStorage.getItem('pb_url'), k=localStorage.getItem('pb_key');
+  if(u&&k){ document.getElementById('inputUrl').value=u; document.getElementById('inputKey').value=k; SUPABASE_URL=u; SUPABASE_KEY=k; testConnection(); }
+});
+
+// ═══ Changelog ═══
+var CHANGELOG = [
+  {
+    ver: 'v0.5.2', date: '2026-02-20', current: true,
+    title: 'DBスキーマ同期 & カラム修正',
+    changes: [
+      { type: 'fix', text: 'pet_families クエリの registered_at → created_at 修正（実DBカラム名に整合）' },
+      { type: 'feat', text: 'openchats: country, description, notes, phase, leader_name, last_report_at, last_topic_at カラム追加' },
+      { type: 'feat', text: 'oc_post_log: posted_by カラム追加' },
+      { type: 'feat', text: 'oc_mod_log: severity, category, description, action_taken, reported_by, reported_at カラム追加' },
+      { type: 'improve', text: 'マイグレーション 20260220200000_dashboard_sync.sql 追加でDB整合性を確保' }
+    ]
+  },
+  {
+    ver: 'v0.5.1', date: '2026-02-19',
+    title: 'テンプレート同期 & 打刻バグ修正',
+    changes: [
+      { type: 'feat', text: '投稿テンプレート: OpenChat選択時にDBから実データを自動取得し変数を置換 ({area}, {total}, {dog}, {cat} 等)' },
+      { type: 'feat', text: '更新履歴ページ: サイドバーのバージョン番号をクリックで更新履歴を表示' },
+      { type: 'fix', text: 'メンバー打刻: メンバーがRich Menuタップ時「未登録」扱いになるバグを修正（owner/member判定追加）' },
+      { type: 'fix', text: 'メンバーリマインド: 1日1家族1回制限（PropertiesServiceフラグ）でループ通知を防止' },
+      { type: 'fix', text: 'checkinGenkiApi: メンバー経由の意図しない打刻を防止するガード追加' },
+      { type: 'improve', text: 'insertCheckin: line_idフィールドを記録し打刻者の追跡が可能に' },
+      { type: 'improve', text: 'GAS診断ツール: listAllTriggers(), repairTriggers(), cleanupReminderFlags() 追加' }
+    ]
+  },
+  {
+    ver: 'v0.5.0', date: '2026-02-17',
+    title: 'OpenChat運営統合',
+    changes: [
+      { type: 'feat', text: 'OpenChat一覧管理: 国/エリア/フェーズ/リーダー管理、新規登録・編集・削除' },
+      { type: 'feat', text: '家族 × OpenChat紐づけ: 家族を任意のOpenChatに紐づけ（バインド/アンバインド）' },
+      { type: 'feat', text: 'OpenChat運営パネル: 日次チェックリスト・投稿テンプレート・話題カレンダー・モデレーション' },
+      { type: 'feat', text: '運営マニュアル: ライフサイクル管理・禁止ワード辞書・対応テンプレート内蔵' },
+      { type: 'feat', text: 'フロントエンド設定ページ: OpenChat紐づけ済みの場合にリンク表示' },
+      { type: 'improve', text: 'DB: openchats, oc_post_log, oc_mod_log テーブル追加、RLSポリシー設定' },
+      { type: 'improve', text: 'ダッシュボード: OpenChat数・総メンバー数をサマリーカードに追加' }
+    ]
+  },
+  {
+    ver: 'v0.4.7', date: '2026-02-15',
+    title: '枠・課金管理',
+    changes: [
+      { type: 'feat', text: '基本枠（max_members）を家族ごとにカスタム設定可能に' },
+      { type: 'feat', text: 'ボーナス枠（bonus_slots）・有料枠（paid_slots）の管理UI' },
+      { type: 'fix', text: 'フロントエンド家族招待ページ: 基本枠がDBから動的読み込みされるよう修正（ハードコード2→DB値）' },
+      { type: 'improve', text: 'ダッシュボード: 最近登録家族テーブルに基本枠表示' }
+    ]
+  },
+  {
+    ver: 'v0.4.5', date: '2026-02-13',
+    title: 'Supabase移行 & 管理パネルv1',
+    changes: [
+      { type: 'feat', text: 'Google Sheets → Supabase PostgreSQL 完全移行' },
+      { type: 'feat', text: '管理パネル初版: ダッシュボード、テーブル閲覧、SQL/RESTツール' },
+      { type: 'feat', text: 'GAS 02_supabase.gs: 全関数シグネチャ維持でバックエンド透過移行' },
+      { type: 'improve', text: 'RLSポリシー: anon keyでの全テーブルアクセス設定' },
+      { type: 'improve', text: '接続設定: LocalStorageに保存しリロード後も自動接続' }
+    ]
+  },
+  {
+    ver: 'v0.4.0', date: '2026-02-08',
+    title: 'LINE MVP 初版',
+    changes: [
+      { type: 'feat', text: 'Rich Menu: 元気です / 心配な子がいる / レポート / 家族 / 設定' },
+      { type: 'feat', text: '元気チェック: ワンタップ打刻 + 家族自動Push通知' },
+      { type: 'feat', text: '心配チェック: LIFF ペット選択 → 症状選択 → 記録 → 家族通知' },
+      { type: 'feat', text: '家族管理: 家族コード発行・参加・招待・メンバー管理' },
+      { type: 'feat', text: 'レポートLIFF: 連続日数・元気率・地域統計の可視化' },
+      { type: 'feat', text: '設定LIFF: 個人情報編集・ペット情報編集・通知設定' },
+      { type: 'feat', text: '定時リマインド: AM8:00 / PM8:00 + 3日連続未打刻フォロー' }
+    ]
+  }
+];
+
+function showChangelog() {
+  var html = '';
+  CHANGELOG.forEach(function(v) {
+    html += '<div class="cl-ver">';
+    html += '<div class="cl-ver-head">';
+    html += '<span class="cl-ver-tag '+(v.current?'current':'old')+'">'+v.ver+'</span>';
+    html += '<span class="cl-ver-date">'+v.date+'</span>';
+    html += '<span class="cl-ver-title">'+escapeHtml(v.title)+'</span>';
+    html += '</div>';
+    html += '<ul class="cl-changes">';
+    v.changes.forEach(function(c) {
+      html += '<li class="'+c.type+'"><span class="cl-badge '+c.type+'">'+(c.type==='feat'?'NEW':c.type==='fix'?'FIX':'改善')+'</span>'+escapeHtml(c.text)+'</li>';
+    });
+    html += '</ul></div>';
+  });
+  document.getElementById('clBody').innerHTML = html;
+  document.getElementById('clOverlay').classList.add('show');
+}
+
+function closeChangelog() {
+  document.getElementById('clOverlay').classList.remove('show');
+}
+</script>
+<!-- ═══ Changelog Modal ═══ -->
+<div class="cl-overlay" id="clOverlay" onclick="if(event.target===this)closeChangelog()">
+  <div class="cl-modal">
+    <div class="cl-head">
+      <span style="font-size:22px;">📝</span>
+      <h2>更新履歴</h2>
+      <button class="cl-close" onclick="closeChangelog()">✕</button>
+    </div>
+    <div class="cl-body" id="clBody"></div>
+  </div>
+</div>
+
+</body>
+</html>
