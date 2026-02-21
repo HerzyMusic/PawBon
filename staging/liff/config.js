@@ -81,10 +81,12 @@ const PAWBON_CONFIG = {
   },
 
   // ─────────────────────────────
-  // ③ LINE 公式アカウント — 全環境共通
+  // ③ LINE 公式アカウント（環境別）/ LINE 官方帐号（按环境）
   // ─────────────────────────────
-  LINE_BOT_ID: '@pawbon',
-  LINE_ADD_FRIEND_URL: 'https://line.me/R/ti/p/@pawbon',
+  LINE_BOT_ID: (ENV === 'PRODUCTION') ? '@pawbon' : '@709kodce',
+  LINE_ADD_FRIEND_URL: (ENV === 'PRODUCTION')
+    ? 'https://line.me/R/ti/p/@pawbon'
+    : 'https://line.me/R/ti/p/@709kodce',
 
   // ─────────────────────────────
   // ④ LIFF ページのベースURL（GitHub Pages）
