@@ -293,16 +293,37 @@ function showTodayResult(checkin) {
   document.getElementById('resultCard').innerHTML = html;
 }
 
-// ═══ リマインド送信 ═══
+// ═══ リマインド送信（1日1回のみ、重複防止） ═══
+function getWorryReminderKey() {
+  var today = new Date().toISOString().slice(0, 10);
+  return 'pawbon_worry_reminded_' + familyCode + '_' + today;
+}
+
 function showMemberReminder() {
   document.getElementById('viewReminder').style.display = 'block';
   var ownerName = family.owner_name || '飼い主さん';
   document.getElementById('reminderSub').textContent = petNames.join('、');
-  document.getElementById('reminderTitle').textContent =
-    'まもなく ' + ownerName + ' に\nリマインドを送ります...';
-  document.getElementById('reminderDesc').innerHTML =
-    '🐾 <strong>' + escapeHtml(petNames.join('、')) + '</strong> の<br>今日の元気チェックはまだです。';
-  sendReminder(ownerName);
+
+  // 今日既に送信済みかチェック
+  var alreadySent = false;
+  try { alreadySent = localStorage.getItem(getWorryReminderKey()) === '1'; } catch(e) {}
+
+  if (alreadySent) {
+    // 2回目以降: 送信済み表示のみ（再送しない）
+    document.getElementById('reminderTitle').textContent =
+      '📨 ' + ownerName + ' に\nリマインド送信済みです';
+    document.getElementById('reminderDesc').innerHTML =
+      '🐾 <strong>' + escapeHtml(petNames.join('、')) + '</strong> の元気チェックを<br>' +
+      escapeHtml(ownerName) + ' にお願い済みです。<br><br>チェックが完了すると<br>あなたにも結果が届きます 💌';
+    document.getElementById('reminderBadge').style.display = 'inline-block';
+  } else {
+    // 初回: リマインドを自動送信
+    document.getElementById('reminderTitle').textContent =
+      'まもなく ' + ownerName + ' に\nリマインドを送ります...';
+    document.getElementById('reminderDesc').innerHTML =
+      '🐾 <strong>' + escapeHtml(petNames.join('、')) + '</strong> の<br>今日の元気チェックはまだです。';
+    sendReminder(ownerName);
+  }
 }
 
 async function sendReminder(ownerName) {
@@ -317,6 +338,9 @@ async function sendReminder(ownerName) {
         petNames: petNames.join('、')
       })
     });
+
+    // 送信成功 → localStorage に記録（重複防止）
+    try { localStorage.setItem(getWorryReminderKey(), '1'); } catch(e) {}
 
     document.getElementById('reminderTitle').textContent =
       '📨 ' + ownerName + ' に\nリマインドを送りました！';
