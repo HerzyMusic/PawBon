@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PawBon Admin — データベース管理</title>
+<title>PawBon Admin — 管理ダッシュボード</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -245,54 +245,85 @@ td .tag.active{background:#DBEAFE;color:#1E40AF;}
   .lc-arrow{transform:rotate(90deg);justify-content:center;}
   .tmpl-grid{grid-template-columns:1fr;}
 }
+
+/* ═══ Login Panel ═══ */
+.login-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:9999;display:flex;align-items:center;justify-content:center;}
+.login-card{background:var(--card);border-radius:20px;padding:40px;width:400px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.1);text-align:center;}
+.login-card h1{font-size:24px;font-weight:900;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:8px;}
+.login-card p{font-size:12px;color:var(--s500);margin-bottom:24px;}
+.login-card .field{margin-bottom:16px;text-align:left;}
+.login-card .field label{display:block;font-size:11px;font-weight:700;color:var(--s500);margin-bottom:4px;letter-spacing:.5px;}
+.login-card .field input{width:100%;padding:12px 14px;border:1.5px solid var(--s200);border-radius:10px;font-size:14px;background:var(--bg);font-family:inherit;}
+.login-card .field input:focus{outline:none;border-color:var(--teal);}
+.login-card .login-btn{width:100%;padding:14px;border-radius:12px;background:var(--teal);color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .15s;margin-top:8px;}
+.login-card .login-btn:hover{background:var(--teal-d);}
+.login-card .login-btn:disabled{background:var(--s300);cursor:not-allowed;}
+.login-error{color:var(--rose);font-size:12px;font-weight:600;margin-top:12px;display:none;}
+.user-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--s400);padding:12px 20px;border-top:1px solid rgba(255,255,255,.06);margin-top:auto;}
+.user-bar .role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:6px;}
+.role-badge.super_admin{background:var(--rose);color:#fff;}
+.role-badge.admin{background:var(--teal);color:#fff;}
+.role-badge.viewer{background:var(--s400);color:#fff;}
+.logout-btn{margin-left:auto;background:none;border:none;color:var(--s500);cursor:pointer;font-size:11px;font-family:inherit;padding:4px 8px;border-radius:6px;transition:all .15s;}
+.logout-btn:hover{background:rgba(255,255,255,.06);color:var(--s300);}
+
+/* ═══ Admin Users Management ═══ */
+.admin-user-card{background:var(--card);border-radius:12px;border:1px solid var(--s200);padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
+.admin-user-card .au-email{font-size:13px;font-weight:600;flex:1;}
+.admin-user-card .au-name{font-size:11px;color:var(--s500);}
+.admin-user-card select{padding:6px 10px;border:1.5px solid var(--s200);border-radius:8px;font-size:12px;background:var(--card);font-family:inherit;}
 </style>
 </head>
 <body>
 
 <!-- ═══ Sidebar ═══ -->
-<div class="sidebar">
+<div class="sidebar" style="display:flex;flex-direction:column;">
+  <div style="flex:1;overflow-y:auto;">
   <div class="sidebar-brand">
     <h1>🐾 <span>PawBon Admin</span></h1>
-    <p>データベース管理 <a href="javascript:void(0)" onclick="showChangelog()" style="color:var(--teal);text-decoration:none;cursor:pointer;border-bottom:1px dashed var(--teal);" title="更新履歴を表示">v0.5.2</a></p>
+    <p>管理ダッシュボード <a href="javascript:void(0)" onclick="showChangelog()" style="color:var(--teal);text-decoration:none;cursor:pointer;border-bottom:1px dashed var(--teal);" title="更新履歴を表示">v0.6.0</a></p>
   </div>
 
   <div class="sidebar-section">テーブル</div>
-  <div class="sidebar-item active" data-tab="dashboard"><span class="icon">📊</span><span>ダッシュボード</span></div>
-  <div class="sidebar-item" data-tab="pet_families"><span class="icon">🏠</span><span>pet_families</span><span class="badge" id="badge-families">-</span></div>
-  <div class="sidebar-item" data-tab="family_members"><span class="icon">👥</span><span>family_members</span><span class="badge" id="badge-members">-</span></div>
-  <div class="sidebar-item" data-tab="checkins"><span class="icon">✅</span><span>checkins</span><span class="badge" id="badge-checkins">-</span></div>
-  <div class="sidebar-item" data-tab="referrals"><span class="icon">🎁</span><span>referrals</span><span class="badge" id="badge-referrals">-</span></div>
+  <div class="sidebar-item active" data-tab="dashboard" data-min-role="viewer"><span class="icon">📊</span><span>ダッシュボード</span></div>
+  <div class="sidebar-item" data-tab="pet_families" data-min-role="viewer"><span class="icon">🏠</span><span>pet_families</span><span class="badge" id="badge-families">-</span></div>
+  <div class="sidebar-item" data-tab="family_members" data-min-role="viewer"><span class="icon">👥</span><span>family_members</span><span class="badge" id="badge-members">-</span></div>
+  <div class="sidebar-item" data-tab="checkins" data-min-role="viewer"><span class="icon">✅</span><span>checkins</span><span class="badge" id="badge-checkins">-</span></div>
+  <div class="sidebar-item" data-tab="referrals" data-min-role="viewer"><span class="icon">🎁</span><span>referrals</span><span class="badge" id="badge-referrals">-</span></div>
 
   <div class="sidebar-section">管理</div>
-  <div class="sidebar-item" data-tab="quota_mgmt"><span class="icon">🎫</span><span>枠・課金管理</span></div>
-  <div class="sidebar-item" data-tab="openchat_list"><span class="icon">💬</span><span>OpenChat一覧</span><span class="badge" id="badge-openchats">-</span></div>
-  <div class="sidebar-item" data-tab="openchat_bind"><span class="icon">🔗</span><span>家族 × OpenChat</span></div>
+  <div class="sidebar-item" data-tab="quota_mgmt" data-min-role="admin"><span class="icon">🎫</span><span>枠・課金管理</span></div>
+  <div class="sidebar-item" data-tab="openchat_list" data-min-role="admin"><span class="icon">💬</span><span>OpenChat一覧</span><span class="badge" id="badge-openchats">-</span></div>
+  <div class="sidebar-item" data-tab="openchat_bind" data-min-role="admin"><span class="icon">🔗</span><span>家族 × OpenChat</span></div>
 
   <div class="sidebar-section" style="color:#06c755;">OpenChat運営</div>
-  <div class="sidebar-item" data-tab="oc_daily"><span class="icon">☀️</span><span>日次運営パネル</span></div>
-  <div class="sidebar-item" data-tab="oc_templates"><span class="icon">📋</span><span>投稿テンプレート</span></div>
-  <div class="sidebar-item" data-tab="oc_calendar"><span class="icon">📅</span><span>話題カレンダー</span></div>
-  <div class="sidebar-item" data-tab="oc_moderation"><span class="icon">🛡️</span><span>モデレーション</span></div>
-  <div class="sidebar-item" data-tab="oc_manual"><span class="icon">📖</span><span>運営マニュアル</span></div>
+  <div class="sidebar-item" data-tab="oc_daily" data-min-role="admin"><span class="icon">☀️</span><span>日次運営パネル</span></div>
+  <div class="sidebar-item" data-tab="oc_templates" data-min-role="admin"><span class="icon">📋</span><span>投稿テンプレート</span></div>
+  <div class="sidebar-item" data-tab="oc_calendar" data-min-role="admin"><span class="icon">📅</span><span>話題カレンダー</span></div>
+  <div class="sidebar-item" data-tab="oc_moderation" data-min-role="admin"><span class="icon">🛡️</span><span>モデレーション</span></div>
+  <div class="sidebar-item" data-tab="oc_manual" data-min-role="admin"><span class="icon">📖</span><span>運営マニュアル</span></div>
 
   <div class="sidebar-section">ビュー</div>
-  <div class="sidebar-item" data-tab="today_summary"><span class="icon">📋</span><span>today_summary</span></div>
-  <div class="sidebar-item" data-tab="family_overview"><span class="icon">📈</span><span>family_overview</span></div>
+  <div class="sidebar-item" data-tab="today_summary" data-min-role="viewer"><span class="icon">📋</span><span>today_summary</span></div>
+  <div class="sidebar-item" data-tab="family_overview" data-min-role="viewer"><span class="icon">📈</span><span>family_overview</span></div>
 
   <div class="sidebar-section">ツール</div>
-  <div class="sidebar-item" data-tab="sql"><span class="icon">⚡</span><span>SQL / REST</span></div>
+  <div class="sidebar-item" data-tab="sql" data-min-role="super_admin"><span class="icon">⚡</span><span>SQL / REST</span></div>
+  <div class="sidebar-item" data-tab="admin_users" data-min-role="super_admin"><span class="icon">👤</span><span>管理者ユーザー</span></div>
+  </div>
+
+  <div class="user-bar" id="userBar" style="display:none;">
+    <span id="userDisplayName">-</span>
+    <span class="role-badge" id="userRoleBadge">-</span>
+    <button class="logout-btn" onclick="adminLogout()">ログアウト</button>
+  </div>
 </div>
 
 <!-- ═══ Main ═══ -->
 <div class="main">
 
-  <div class="conn-panel" id="connPanel">
-    <h3><span class="status-dot off" id="connDot"></span> Supabase 接続設定</h3>
-    <div class="conn-grid">
-      <div class="conn-field"><label>PROJECT URL</label><input type="text" id="inputUrl" placeholder="https://xxxxx.supabase.co"></div>
-      <div class="conn-field"><label>ANON API KEY</label><input type="password" id="inputKey" placeholder="eyJhbGciOi..."></div>
-      <button class="btn btn-primary" onclick="connect()">接続</button>
-    </div>
+  <div class="conn-panel" id="connPanel" style="padding:12px 24px;">
+    <h3 style="margin-bottom:0;font-size:13px;"><span class="status-dot off" id="connDot"></span> <span id="connLabel">ログインしてください</span></h3>
   </div>
 
   <!-- ═══ Dashboard ═══ -->
@@ -692,6 +723,27 @@ td .tag.active{background:#DBEAFE;color:#1E40AF;}
   </div>
 
   <!-- ═══ SQL ═══ -->
+  <!-- ═══ 管理者ユーザー管理 ═══ -->
+  <div class="tab-content" id="tab-admin_users">
+    <div class="topbar"><h2>👤 管理者ユーザー管理</h2><button class="btn btn-primary btn-sm" onclick="showAddAdminForm()">＋ 新規追加</button><button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="loadAdminUsers()">🔄 更新</button></div>
+
+    <div class="table-wrap" id="addAdminForm" style="display:none;padding:20px;margin-bottom:16px;">
+      <h3 style="font-size:14px;font-weight:700;margin-bottom:16px;">👤 新規管理者追加</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;align-items:end;">
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">メールアドレス *</label><input type="email" id="newAdminEmail" placeholder="admin@example.com" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">パスワード *</label><input type="password" id="newAdminPass" placeholder="8文字以上" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">表示名</label><input type="text" id="newAdminName" placeholder="田中太郎" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;"></div>
+        <div><label style="font-size:11px;font-weight:700;color:var(--s500);display:block;margin-bottom:4px;">ロール</label><select id="newAdminRole" style="width:100%;padding:10px;border:1.5px solid var(--s200);border-radius:8px;font-size:13px;background:var(--card);"><option value="viewer">viewer（閲覧のみ）</option><option value="admin">admin（閲覧＋編集）</option><option value="super_admin">super_admin（全権限）</option></select></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-primary btn-sm" onclick="createAdminUser()">作成</button>
+        <button class="btn btn-outline btn-sm" onclick="document.getElementById('addAdminForm').style.display='none'">キャンセル</button>
+      </div>
+    </div>
+
+    <div id="adminUsersList"><div class="empty"><div class="icon">👤</div><p>ログイン後にデータ表示</p></div></div>
+  </div>
+
   <div class="tab-content" id="tab-sql">
     <div class="topbar"><h2>⚡ SQL / REST クエリ</h2></div>
     <div class="table-wrap" style="padding:20px;">
@@ -708,46 +760,138 @@ td .tag.active{background:#DBEAFE;color:#1E40AF;}
 
 <script>
 // ═══ State ═══
-var SUPABASE_URL = '';
-var SUPABASE_KEY = '';
+var API_BASE = '';  // api-admin Edge Function URL（自動設定）
 var connected = false;
+var currentUser = null;  // { email, role, display_name }
 var allFamiliesQuota = [];
 
-// ═══ Connection ═══
-function connect() {
-  SUPABASE_URL = document.getElementById('inputUrl').value.trim().replace(/\/+$/, '');
-  SUPABASE_KEY = document.getElementById('inputKey').value.trim();
-  if (!SUPABASE_URL || !SUPABASE_KEY) { toast('URL と API Key を入力してください','err'); return; }
-  testConnection();
+// ═══ Role Hierarchy ═══
+var ROLE_LEVEL = { viewer: 1, admin: 2, super_admin: 3 };
+function hasPermission(userRole, requiredRole) {
+  return (ROLE_LEVEL[userRole] || 0) >= (ROLE_LEVEL[requiredRole] || 99);
 }
 
-async function testConnection() {
+// ═══ Admin Auth ═══
+async function adminLogin() {
+  var email = document.getElementById('loginEmail').value.trim();
+  var pass = document.getElementById('loginPass').value;
+  var errEl = document.getElementById('loginError');
+  var btn = document.getElementById('loginBtn');
+  errEl.style.display = 'none';
+  if (!email || !pass) { errEl.textContent = 'メールアドレスとパスワードを入力してください'; errEl.style.display = 'block'; return; }
+  btn.disabled = true; btn.textContent = 'ログイン中...';
   try {
-    var res = await supaFetch('/rest/v1/pet_families?limit=1');
-    if (res.ok) {
-      connected = true;
-      document.getElementById('connDot').className = 'status-dot on';
-      document.getElementById('connPanel').querySelector('h3').innerHTML = '<span class="status-dot on"></span> Supabase 接続済み ✅';
-      toast('接続成功！','ok');
-      localStorage.setItem('pb_url', SUPABASE_URL);
-      localStorage.setItem('pb_key', SUPABASE_KEY);
-      refreshAll();
-    } else { toast('接続エラー: ' + res.status, 'err'); }
-  } catch(e) { toast('接続失敗: ' + e.message, 'err'); }
+    var res = await fetch(API_BASE + '?action=login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: pass })
+    });
+    var json = await res.json();
+    if (!json.success) {
+      errEl.textContent = json.error ? json.error.message : 'ログインに失敗しました';
+      errEl.style.display = 'block';
+      btn.disabled = false; btn.textContent = 'ログイン';
+      return;
+    }
+    // JWT + ユーザー情報を保存
+    localStorage.setItem('admin_jwt', json.data.token);
+    localStorage.setItem('admin_refresh', json.data.refresh_token || '');
+    localStorage.setItem('admin_user', JSON.stringify(json.data.user));
+    onLoginSuccess(json.data.user);
+  } catch(e) {
+    errEl.textContent = '接続エラー: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = 'ログイン';
+  }
 }
 
-function supaFetch(path, options) {
-  return fetch(SUPABASE_URL + path, Object.assign({
-    headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json', 'Prefer':'count=exact' }
+function onLoginSuccess(user) {
+  currentUser = user;
+  connected = true;
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('connDot').className = 'status-dot on';
+  document.getElementById('connLabel').textContent = user.display_name + ' でログイン中';
+  // サイドバーユーザー情報
+  document.getElementById('userBar').style.display = 'flex';
+  document.getElementById('userDisplayName').textContent = user.display_name || user.email;
+  var badge = document.getElementById('userRoleBadge');
+  badge.textContent = user.role;
+  badge.className = 'role-badge ' + user.role;
+  // ロールベース UI 制御
+  applyRolePermissions(user.role);
+  toast('ログイン成功！ ' + user.role, 'ok');
+  refreshAll();
+}
+
+function adminLogout() {
+  localStorage.removeItem('admin_jwt');
+  localStorage.removeItem('admin_refresh');
+  localStorage.removeItem('admin_user');
+  currentUser = null;
+  connected = false;
+  location.reload();
+}
+
+function applyRolePermissions(role) {
+  document.querySelectorAll('[data-min-role]').forEach(function(el) {
+    var minRole = el.dataset.minRole;
+    el.style.display = hasPermission(role, minRole) ? '' : 'none';
+  });
+  // viewer: 編集ボタン非表示
+  if (role === 'viewer') {
+    document.querySelectorAll('.btn-primary, .btn-danger, .btn-amber').forEach(function(btn) {
+      if (btn.id === 'loginBtn') return;
+      // 更新ボタンは残す
+      if (btn.textContent.indexOf('更新') !== -1) return;
+      btn.style.display = 'none';
+    });
+  }
+}
+
+// ═══ API Communication ═══
+function adminFetch(action, params, options) {
+  var jwt = localStorage.getItem('admin_jwt') || '';
+  var url = API_BASE + '?' + new URLSearchParams(Object.assign({ action: action }, params || {}));
+  return fetch(url, Object.assign({
+    headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' }
   }, options || {}));
 }
 
-function supaPatch(table, query, data) {
-  return fetch(SUPABASE_URL + '/rest/v1/' + table + '?' + query, {
-    method: 'PATCH',
-    headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-    body: JSON.stringify(data)
+function adminPost(action, body) {
+  var jwt = localStorage.getItem('admin_jwt') || '';
+  return fetch(API_BASE + '?action=' + action, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + jwt, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
   });
+}
+
+// Legacy wrapper: REST クエリ → api-admin query 経由
+// query action は super_admin のみだが、レスポンス形式を揃える
+async function supaFetch(path) {
+  var res = await adminFetch('query', { path: path });
+  var json = await res.json();
+  // supaFetch の呼び出し元は res.json() を期待するので、
+  // query の result を直接返す模擬 Response を生成
+  var result = (json.success && json.data) ? json.data.result : json;
+  return {
+    ok: json.success,
+    status: (json.success && json.data) ? json.data.status : 400,
+    json: function() { return Promise.resolve(result); },
+    text: function() { return Promise.resolve(JSON.stringify(result)); },
+    headers: { get: function() { return null; } }
+  };
+}
+async function supaPatch(table, query, data) {
+  // PATCH → api-admin patch 経由
+  var match = {};
+  query.split('&').forEach(function(pair) {
+    var parts = pair.split('=eq.');
+    if (parts.length === 2) match[parts[0]] = decodeURIComponent(parts[1]);
+  });
+  var res = await adminPost('patch', { table: table, match: match, data: data });
+  var json = await res.json();
+  return { ok: json.success, text: function() { return Promise.resolve(json.error?json.error.message:''); } };
 }
 
 // ═══ Table Config ═══
@@ -825,38 +969,33 @@ var TABLE_CONFIG = {
 
 // ═══ Load Table ═══
 async function loadTable(name) {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var container = document.getElementById('table-' + name);
   if (!container) return;
   container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
   var cfg = TABLE_CONFIG[name] || {};
   var limit = cfg.limit || 200;
   var orderStr = cfg.order || 'id.desc';
-  var path = '/rest/v1/' + name + '?order=' + orderStr + '&limit=' + limit;
+  var orderCol = orderStr.split('.')[0];
+  var asc = orderStr.indexOf('.asc') !== -1 ? 'true' : 'false';
   try {
-    var res = await supaFetch(path);
-    // order 失敗時はフォールバック（order なし）
-    if (!res.ok) {
-      res = await supaFetch('/rest/v1/' + name + '?limit=' + limit);
+    var res = await adminFetch('table', { name: name, limit: limit, order: orderCol, asc: asc });
+    var json = await res.json();
+    if (!json.success) {
+      container.innerHTML='<div class="empty"><div class="icon">⚠️</div><p>エラー: '+escapeHtml(json.error?json.error.message:'不明')+'</p></div>';
+      return;
     }
-    var data = await res.json();
-    var total = res.headers.get('content-range');
-    var count = total ? total.split('/')[1] : (Array.isArray(data)?data.length:'?');
+    var data = json.data.rows;
+    var count = json.data.total;
     var badges = { pet_families:'badge-families', family_members:'badge-members', checkins:'badge-checkins' };
     var b = document.getElementById(badges[name]);
     if (b) b.textContent = count;
     if (!Array.isArray(data) || data.length === 0) {
       container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データがありません</p></div>';
-      // エラーレスポンスの場合は詳細表示
-      if (!Array.isArray(data) && data) {
-        container.innerHTML='<div class="empty"><div class="icon">⚠️</div><p>エラー: '+escapeHtml(JSON.stringify(data).substring(0,200))+'</p></div>';
-      }
       return;
     }
-    // カラム: 設定 → 自動検出（データから取得）
     var allCols = Object.keys(data[0]);
     var cols = cfg.columns || allCols;
-    // hideColumns フィルタ
     var hide = cfg.hideColumns || [];
     cols = cols.filter(function(c){ return hide.indexOf(c) === -1; });
     var labels = cfg.labels || {};
@@ -882,41 +1021,27 @@ async function loadTable(name) {
 async function refreshAll() {
   if (!connected) return;
   try {
-    var r = await Promise.all([
-      supaFetch('/rest/v1/pet_families?select=id&limit=1'),
-      supaFetch('/rest/v1/family_members?select=id&limit=1'),
-      supaFetch('/rest/v1/checkins?select=id&limit=1'),
-      supaFetch('/rest/v1/referrals?select=id&limit=1'),
-      supaFetch('/rest/v1/openchats?select=id&limit=1')
-    ]);
-    var gc = function(x){ var h=x.headers.get('content-range'); return h?h.split('/')[1]:'?'; };
-    document.getElementById('stat-families').textContent = gc(r[0]);
-    document.getElementById('stat-members').textContent = gc(r[1]);
-    document.getElementById('stat-checkins').textContent = gc(r[2]);
-    document.getElementById('badge-families').textContent = gc(r[0]);
-    document.getElementById('badge-members').textContent = gc(r[1]);
-    document.getElementById('badge-checkins').textContent = gc(r[2]);
-    document.getElementById('badge-referrals').textContent = gc(r[3]);
-    document.getElementById('badge-openchats').textContent = gc(r[4]);
+    var res = await adminFetch('dashboard');
+    var json = await res.json();
+    if (!json.success) { console.error('dashboard error:', json.error); return; }
+    var d = json.data;
+    var c = d.counts;
+    document.getElementById('stat-families').textContent = c.families;
+    document.getElementById('stat-members').textContent = c.members;
+    document.getElementById('stat-checkins').textContent = c.checkins;
+    document.getElementById('stat-worry').textContent = c.worries;
+    document.getElementById('stat-revenue').textContent = '¥' + (d.revenue||0).toLocaleString();
+    document.getElementById('badge-families').textContent = c.families;
+    document.getElementById('badge-members').textContent = c.members;
+    document.getElementById('badge-checkins').textContent = c.checkins;
+    document.getElementById('badge-referrals').textContent = c.referrals;
+    document.getElementById('badge-openchats').textContent = c.openchats;
 
-    var wRes = await supaFetch('/rest/v1/checkins?status=eq.worry&select=id&limit=1');
-    document.getElementById('stat-worry').textContent = gc(wRes);
-
-    // Revenue estimate
-    var famRes = await supaFetch('/rest/v1/pet_families?select=paid_slots&paid_slots=gt.0');
-    var famData = await famRes.json();
-    var totalPaid = 0;
-    if (Array.isArray(famData)) famData.forEach(function(f){ totalPaid += (f.paid_slots||0); });
-    document.getElementById('stat-revenue').textContent = '¥' + (totalPaid * 100).toLocaleString();
-  } catch(e) {}
-
-  // Dashboard overview
-  try {
-    var ov = await supaFetch('/rest/v1/pet_families?select=family_code,pet_names,area,area_detail,pet_count,max_members,bonus_slots,paid_slots,status,created_at&order=created_at.desc&limit=10');
-    var data = await ov.json();
+    // 最近の登録家族
+    var data = d.recentFamilies || [];
     var html = '<div class="table-wrap"><div class="table-header"><h3>📈 最近の登録家族</h3></div>';
     html += '<div class="table-scroll"><table><thead><tr><th>家族コード</th><th>ペット名</th><th>地域</th><th>頭数</th><th>基本枠</th><th>招待枠</th><th>課金枠</th><th>合計枠</th><th>登録日</th></tr></thead><tbody>';
-    if (Array.isArray(data) && data.length>0) {
+    if (data.length > 0) {
       data.forEach(function(r){
         var base = r.max_members || 2;
         var total = base + (r.bonus_slots||0) + (r.paid_slots||0);
@@ -935,29 +1060,35 @@ async function refreshAll() {
     } else { html += '<tr><td colspan="9" style="text-align:center;color:var(--s400);padding:24px;">データなし</td></tr>'; }
     html += '</tbody></table></div></div>';
     document.getElementById('dashboardContent').innerHTML = html;
-  } catch(e) { document.getElementById('dashboardContent').innerHTML=''; }
+  } catch(e) { console.error('refreshAll error:', e); }
 
-  var activeTab = document.querySelector('.sidebar-item.active').dataset.tab;
-  if (activeTab !== 'dashboard' && activeTab !== 'sql' && activeTab !== 'quota_mgmt') loadTable(activeTab);
-  if (activeTab === 'quota_mgmt') loadQuotaMgmt();
+  var activeTab = document.querySelector('.sidebar-item.active');
+  if (activeTab) {
+    var tab = activeTab.dataset.tab;
+    if (tab !== 'dashboard' && tab !== 'sql' && tab !== 'quota_mgmt' && tab !== 'admin_users') loadTable(tab);
+    if (tab === 'quota_mgmt') loadQuotaMgmt();
+  }
 }
 
 // ═══ Quota Management ═══
 async function loadQuotaMgmt() {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var container = document.getElementById('quotaList');
   container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
 
   try {
-    var res = await supaFetch('/rest/v1/pet_families?select=*&order=created_at.desc');
-    var families = await res.json();
-    if (!Array.isArray(families)) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
+    var [famRes, memRes] = await Promise.all([
+      adminFetch('table', { name: 'pet_families', limit: 500, order: 'created_at', asc: 'false' }),
+      adminFetch('table', { name: 'family_members', limit: 500, order: 'registered_at', asc: 'false' })
+    ]);
+    var famJson = await famRes.json();
+    var memJson = await memRes.json();
+    var families = (famJson.success && famJson.data) ? famJson.data.rows : [];
+    var memData = (memJson.success && memJson.data) ? memJson.data.rows : [];
+    if (!Array.isArray(families) || families.length === 0) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
 
     allFamiliesQuota = families;
 
-    // Get member counts
-    var memRes = await supaFetch('/rest/v1/family_members?select=family_code');
-    var memData = await memRes.json();
     var memCounts = {};
     if (Array.isArray(memData)) {
       memData.forEach(function(m) {
@@ -965,7 +1096,6 @@ async function loadQuotaMgmt() {
       });
     }
 
-    // Stats
     var totalBase = 0, totalBonus = 0, totalPaid = 0;
     families.forEach(function(f){ totalBase += (f.max_members||2); totalBonus += (f.bonus_slots||0); totalPaid += (f.paid_slots||0); });
     document.getElementById('q-total-free').textContent = totalBase;
@@ -1091,11 +1221,15 @@ function mergeAreaData(dbData) {
 
 async function loadAreaData() {
   try {
-    var res1 = await supaFetch('/rest/v1/pet_families?select=country,area,area_detail');
-    var res2 = await supaFetch('/rest/v1/openchats?select=country,area,area_detail');
-    var data1 = await res1.json();
-    var data2 = await res2.json();
-    var allData = [].concat(Array.isArray(data1)?data1:[]).concat(Array.isArray(data2)?data2:[]);
+    var [res1, res2] = await Promise.all([
+      adminFetch('table', { name: 'pet_families', limit: 500, order: 'created_at', asc: 'false' }),
+      adminFetch('table', { name: 'openchats', limit: 500, order: 'name', asc: 'true' })
+    ]);
+    var j1 = await res1.json();
+    var j2 = await res2.json();
+    var data1 = (j1.success && j1.data) ? j1.data.rows : [];
+    var data2 = (j2.success && j2.data) ? j2.data.rows : [];
+    var allData = [].concat(data1).concat(data2);
     mergeAreaData(allData);
   } catch(e) {
     console.error('loadAreaData error:', e);
@@ -1178,7 +1312,7 @@ function hideOcForm() {
 }
 
 async function loadOcList() {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var container = document.getElementById('ocListContainer');
   container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
 
@@ -1186,15 +1320,19 @@ async function loadOcList() {
     // エリアデータを先にロード
     await loadAreaData();
 
-    var res = await supaFetch('/rest/v1/openchats?order=created_at.desc');
-    var data = await res.json();
-    if (!Array.isArray(data)) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
+    var [ocRes, famTableRes] = await Promise.all([
+      adminFetch('table', { name: 'openchats', limit: 500, order: 'name', asc: 'true' }),
+      adminFetch('table', { name: 'pet_families', limit: 500, order: 'created_at', asc: 'false' })
+    ]);
+    var ocJson = await ocRes.json();
+    var famJson = await famTableRes.json();
+    var data = (ocJson.success && ocJson.data) ? ocJson.data.rows : [];
+    if (!Array.isArray(data) || data.length === 0) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
     allOpenchats = data;
     document.getElementById('badge-openchats').textContent = data.length;
 
     // 各OpenChatの紐づけ家族数を取得
-    var famRes = await supaFetch('/rest/v1/pet_families?select=openchat_id');
-    var famData = await famRes.json();
+    var famData = (famJson.success && famJson.data) ? famJson.data.rows : [];
     var bindCounts = {};
     var totalBound = 0;
     if (Array.isArray(famData)) {
@@ -1278,7 +1416,7 @@ function renderOcList(list, bindCounts) {
 async function quickPostTopic(ocId) {
   if (!connected) return;
   try {
-    await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:ocId,post_type:'topic',content:'話題投稿',posted_by:'管理者'})});
+    await adminPost('insert',{table:'oc_post_log',data:{openchat_id:ocId,post_type:'topic',content:'話題投稿',posted_by:currentUser?currentUser.display_name:'管理者'}});
     await supaPatch('openchats','id=eq.'+ocId,{last_topic_at:new Date().toISOString()});
     toast('話題投稿を記録しました','ok');
     loadOcList();
@@ -1307,22 +1445,19 @@ async function saveOcEntry() {
   var editId = document.getElementById('ocEditId').value;
 
   try {
-    var res;
     if (editId) {
-      res = await supaPatch('openchats', 'id=eq.' + editId, payload);
+      var res = await supaPatch('openchats', 'id=eq.' + editId, payload);
+      if (res.ok) {
+        toast('OpenChatを更新しました', 'ok');
+        hideOcForm(); loadOcList();
+      } else { toast('エラー: ' + await res.text(), 'err'); }
     } else {
-      res = await fetch(SUPABASE_URL + '/rest/v1/openchats', {
-        method: 'POST',
-        headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Content-Type':'application/json', 'Prefer':'return=minimal' },
-        body: JSON.stringify(payload)
-      });
-    }
-    if (res.ok) {
-      toast(editId ? 'OpenChatを更新しました' : 'OpenChatを追加しました', 'ok');
-      hideOcForm();
-      loadOcList();
-    } else {
-      toast('エラー: ' + await res.text(), 'err');
+      var res = await adminPost('insert', { table: 'openchats', data: payload });
+      var json = await res.json();
+      if (json.success) {
+        toast('OpenChatを追加しました', 'ok');
+        hideOcForm(); loadOcList();
+      } else { toast('エラー: '+(json.error?json.error.message:'追加失敗'), 'err'); }
     }
   } catch(e) { toast('エラー: '+e.message, 'err'); }
 }
@@ -1330,14 +1465,12 @@ async function saveOcEntry() {
 async function deleteOc(id, name) {
   if (!confirm('「'+name+'」を削除しますか？\n紐づけ中の家族は自動的に解除されます。')) return;
   try {
-    var res = await fetch(SUPABASE_URL + '/rest/v1/openchats?id=eq.' + id, {
-      method: 'DELETE',
-      headers: { 'apikey':SUPABASE_KEY, 'Authorization':'Bearer '+SUPABASE_KEY, 'Prefer':'return=minimal' }
-    });
-    if (res.ok) {
+    var res = await adminPost('delete-row', { table: 'openchats', match: { id: id } });
+    var json = await res.json();
+    if (json.success) {
       toast('「'+name+'」を削除しました', 'ok');
       loadOcList();
-    } else { toast('エラー: ' + await res.text(), 'err'); }
+    } else { toast('エラー: '+(json.error?json.error.message:'削除失敗'), 'err'); }
   } catch(e) { toast('エラー: '+e.message, 'err'); }
 }
 
@@ -1353,20 +1486,21 @@ function filterOcList() {
 
 // ═══ 家族 × OpenChat紐づけ ═══
 async function loadOcBind() {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var container = document.getElementById('bindList');
   container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
 
   try {
-    // 家族一覧
-    var famRes = await supaFetch('/rest/v1/pet_families?select=family_code,owner_name,pet_names,country,area,area_detail,openchat_id&order=created_at.desc');
-    var families = await famRes.json();
-    if (!Array.isArray(families)) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
-
-    // OpenChat一覧
-    var ocRes = await supaFetch('/rest/v1/openchats?select=id,name,country,area,area_detail&order=name.asc');
-    var openchats = await ocRes.json();
-    if (!Array.isArray(openchats)) openchats = [];
+    // 家族一覧 + OpenChat一覧
+    var [famTableRes, ocTableRes] = await Promise.all([
+      adminFetch('table', { name: 'pet_families', limit: 500, order: 'created_at', asc: 'false' }),
+      adminFetch('table', { name: 'openchats', limit: 500, order: 'name', asc: 'true' })
+    ]);
+    var famJson = await famTableRes.json();
+    var ocJson = await ocTableRes.json();
+    var families = (famJson.success && famJson.data) ? famJson.data.rows : [];
+    if (!Array.isArray(families) || families.length === 0) { container.innerHTML='<div class="empty"><div class="icon">📭</div><p>データなし</p></div>'; return; }
+    var openchats = (ocJson.success && ocJson.data) ? ocJson.data.rows : [];
 
     var linked = families.filter(function(f){ return f.openchat_id; }).length;
     document.getElementById('bind-total').textContent = families.length;
@@ -1514,17 +1648,20 @@ function filterBind() {
 }
 
 async function autoBind() {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
 
-  // 未紐づけ家族を取得
-  var famRes = await supaFetch('/rest/v1/pet_families?select=family_code,country,area,area_detail&openchat_id=is.null');
-  var families = await famRes.json();
-  if (!Array.isArray(families) || families.length === 0) { toast('未紐づけの家族はありません','ok'); return; }
-
-  // OpenChat一覧
-  var ocRes = await supaFetch('/rest/v1/openchats?select=id,country,area,area_detail');
-  var openchats = await ocRes.json();
-  if (!Array.isArray(openchats) || openchats.length === 0) { toast('OpenChatが登録されていません','err'); return; }
+  // 未紐づけ家族 + OpenChat一覧を取得
+  var [famTableRes, ocTableRes] = await Promise.all([
+    adminFetch('table', { name: 'pet_families', limit: 500, order: 'created_at', asc: 'false' }),
+    adminFetch('table', { name: 'openchats', limit: 500, order: 'name', asc: 'true' })
+  ]);
+  var famJson = await famTableRes.json();
+  var ocJson = await ocTableRes.json();
+  var allFam = (famJson.success && famJson.data) ? famJson.data.rows : [];
+  var families = allFam.filter(function(f){ return !f.openchat_id; });
+  if (families.length === 0) { toast('未紐づけの家族はありません','ok'); return; }
+  var openchats = (ocJson.success && ocJson.data) ? ocJson.data.rows : [];
+  if (openchats.length === 0) { toast('OpenChatが登録されていません','err'); return; }
 
   // エリアマッチング（同国 + 同エリア）
   var count = 0;
@@ -1567,16 +1704,23 @@ async function autoBind() {
 async function loadOcDaily() {
   if (!connected) return;
   try {
-    var ocRes = await supaFetch('/rest/v1/openchats?select=id,name,phase,member_count,last_report_at,last_topic_at,url&order=name.asc');
-    var ocs = await ocRes.json();
-    if (!Array.isArray(ocs)) ocs = [];
+    var [ocTableRes, postTableRes, modTableRes] = await Promise.all([
+      adminFetch('table', { name: 'openchats', limit: 500, order: 'name', asc: 'true' }),
+      adminFetch('table', { name: 'oc_post_log', limit: 500, order: 'posted_at', asc: 'false' }),
+      adminFetch('table', { name: 'oc_mod_log', limit: 500, order: 'reported_at', asc: 'false' })
+    ]);
+    var ocJson = await ocTableRes.json();
+    var postJson = await postTableRes.json();
+    var modJson = await modTableRes.json();
+    var ocs = (ocJson.success && ocJson.data) ? ocJson.data.rows : [];
+    var allPosts = (postJson.success && postJson.data) ? postJson.data.rows : [];
+    var allMods = (modJson.success && modJson.data) ? modJson.data.rows : [];
     document.getElementById('od-groups').textContent = ocs.length;
 
     // 今日の投稿数
     var today = new Date().toISOString().substring(0,10);
-    var postRes = await supaFetch('/rest/v1/oc_post_log?select=id&posted_at=gte.'+today+'T00:00:00');
-    var posts = await postRes.json();
-    document.getElementById('od-today-posts').textContent = Array.isArray(posts) ? posts.length : 0;
+    var todayPosts = allPosts.filter(function(p){ return p.posted_at && p.posted_at.substring(0,10) >= today; });
+    document.getElementById('od-today-posts').textContent = todayPosts.length;
 
     // 未レポート群（今日まだレポートしてない群）
     var pending = 0;
@@ -1586,9 +1730,8 @@ async function loadOcDaily() {
     document.getElementById('od-pending').textContent = pending;
 
     // モデレーション件数
-    var modRes = await supaFetch('/rest/v1/oc_mod_log?select=id&reported_at=gte.'+today+'T00:00:00');
-    var mods = await modRes.json();
-    document.getElementById('od-mod').textContent = Array.isArray(mods) ? mods.length : 0;
+    var todayMods = allMods.filter(function(m){ return m.reported_at && m.reported_at.substring(0,10) >= today; });
+    document.getElementById('od-mod').textContent = todayMods.length;
 
     // グループ別ステータス
     renderDailyStatus(ocs, today);
@@ -1627,7 +1770,7 @@ function renderDailyStatus(ocs, today) {
 async function quickPostReport(ocId) {
   if (!connected) return;
   try {
-    await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:ocId,post_type:'daily_report',content:'日次レポート投稿',posted_by:'管理者'})});
+    await adminPost('insert',{table:'oc_post_log',data:{openchat_id:ocId,post_type:'daily_report',content:'日次レポート投稿',posted_by:currentUser?currentUser.display_name:'管理者'}});
     await supaPatch('openchats','id=eq.'+ocId,{last_report_at:new Date().toISOString()});
     toast('レポート投稿を記録しました','ok');
     loadOcDaily();
@@ -1807,11 +1950,11 @@ function openTmplTarget() {
 }
 
 async function logPost(type, tmplId) {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var ocId = document.getElementById('tmplTarget').value;
   if (!ocId) { toast('投稿先のOpenChatを選択してください','err'); return; }
   try {
-    await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:parseInt(ocId),post_type:type,content:tmplId+'テンプレートで投稿',posted_by:'管理者'})});
+    await adminPost('insert',{table:'oc_post_log',data:{openchat_id:parseInt(ocId),post_type:type,content:tmplId+'テンプレートで投稿',posted_by:currentUser?currentUser.display_name:'管理者'}});
     // レポート系なら last_report_at 更新
     if (type==='daily_report'||type==='weekly_report') {
       await supaPatch('openchats','id=eq.'+ocId,{last_report_at:new Date().toISOString()});
@@ -1827,8 +1970,9 @@ async function logPost(type, tmplId) {
 async function loadPostLog() {
   if (!connected) return;
   try {
-    var res = await supaFetch('/rest/v1/oc_post_log?select=*,openchats(name)&order=posted_at.desc&limit=20');
-    var logs = await res.json();
+    var postRes = await adminFetch('table', { name: 'oc_post_log', limit: 20, order: 'posted_at', asc: 'false' });
+    var postJson = await postRes.json();
+    var logs = (postJson.success && postJson.data) ? postJson.data.rows : [];
     if (!Array.isArray(logs) || logs.length === 0) {
       document.getElementById('postLogList').innerHTML = '<div style="color:var(--s400);font-size:12px;padding:8px;">投稿ログはまだありません</div>';
       return;
@@ -1915,7 +2059,7 @@ function loadCalendar() {
 }
 
 async function logTopicPost() {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var ocId = prompt('投稿先のOpenChat IDを入力（複数の場合はカンマ区切り）:');
   if (!ocId) return;
   var ids = ocId.split(',');
@@ -1923,7 +2067,7 @@ async function logTopicPost() {
     var id = parseInt(ids[i].trim());
     if (!id) continue;
     try {
-      await fetch(SUPABASE_URL+'/rest/v1/oc_post_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:id,post_type:'topic',content:'話題投稿',posted_by:'管理者'})});
+      await adminPost('insert',{table:'oc_post_log',data:{openchat_id:id,post_type:'topic',content:'話題投稿',posted_by:currentUser?currentUser.display_name:'管理者'}});
       await supaPatch('openchats','id=eq.'+id,{last_topic_at:new Date().toISOString()});
     } catch(e) {}
   }
@@ -1942,7 +2086,7 @@ function loadModOcSelect() {
 }
 
 async function saveModLog() {
-  if (!connected) { toast('先に接続してください','err'); return; }
+  if (!connected) { toast('先にログインしてください','err'); return; }
   var ocId = document.getElementById('modOc').value;
   var sev = document.getElementById('modSev').value;
   var cat = document.getElementById('modCat').value;
@@ -1950,7 +2094,7 @@ async function saveModLog() {
   var action = document.getElementById('modAction').value.trim();
   if (!desc) { toast('内容を入力してください','err'); return; }
   try {
-    await fetch(SUPABASE_URL+'/rest/v1/oc_mod_log',{method:'POST',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({openchat_id:ocId?parseInt(ocId):null,severity:sev,category:cat,description:desc,action_taken:action,reported_by:'管理者'})});
+    await adminPost('insert',{table:'oc_mod_log',data:{openchat_id:ocId?parseInt(ocId):null,severity:sev,category:cat,description:desc,action_taken:action,reported_by:currentUser?currentUser.display_name:'管理者'}});
     toast('モデレーション記録を保存しました','ok');
     document.getElementById('modDesc').value = '';
     document.getElementById('modAction').value = '';
@@ -1961,8 +2105,9 @@ async function saveModLog() {
 async function loadModLog() {
   if (!connected) return;
   try {
-    var res = await supaFetch('/rest/v1/oc_mod_log?select=*,openchats(name)&order=reported_at.desc&limit=20');
-    var logs = await res.json();
+    var modRes = await adminFetch('table', { name: 'oc_mod_log', limit: 20, order: 'reported_at', asc: 'false' });
+    var modJson = await modRes.json();
+    var logs = (modJson.success && modJson.data) ? modJson.data.rows : [];
     if (!Array.isArray(logs) || logs.length === 0) {
       document.getElementById('modLogList').innerHTML = '<div style="color:var(--s400);font-size:12px;">モデレーション履歴なし</div>';
       return;
@@ -2056,6 +2201,7 @@ document.querySelectorAll('.sidebar-item').forEach(function(item) {
       else if (tab === 'oc_calendar') { loadCalendar(); }
       else if (tab === 'oc_moderation') { loadOcListSilent(); loadModOcSelect(); loadModLog(); }
       else if (tab === 'oc_manual') { /* static content */ }
+      else if (tab === 'admin_users') loadAdminUsers();
       else if (tab !== 'dashboard' && tab !== 'sql') loadTable(tab);
     } else {
       // Static tabs work without connection
@@ -2068,9 +2214,9 @@ document.querySelectorAll('.sidebar-item').forEach(function(item) {
 async function loadOcListSilent() {
   if (!connected) return;
   try {
-    var res = await supaFetch('/rest/v1/openchats?select=id,name,url,area,area_detail,phase,member_count,last_report_at,last_topic_at&order=name.asc');
-    var data = await res.json();
-    if (Array.isArray(data)) allOpenchats = data;
+    var res = await adminFetch('table', { name: 'openchats', limit: 500, order: 'name', asc: 'true' });
+    var json = await res.json();
+    if (json.success && json.data) allOpenchats = json.data.rows || [];
   } catch(e) {}
 }
 
@@ -2078,15 +2224,130 @@ async function loadOcListSilent() {
 function escapeHtml(str) { var d=document.createElement('div'); d.textContent=str; return d.innerHTML; }
 function toast(msg,type) { var t=document.getElementById('toast'); t.textContent=msg; t.className='toast show '+(type||'ok'); setTimeout(function(){ t.className='toast'; },3000); }
 
+// ═══ Admin Users Management ═══
+function showAddAdminForm() { document.getElementById('addAdminForm').style.display = 'block'; }
+
+async function loadAdminUsers() {
+  if (!connected || !currentUser || currentUser.role !== 'super_admin') return;
+  var container = document.getElementById('adminUsersList');
+  container.innerHTML = '<div class="loading"><span class="spinner"></span>読み込み中...</div>';
+  try {
+    var res = await adminFetch('manage-users');
+    var json = await res.json();
+    if (!json.success) { container.innerHTML='<div class="empty"><div class="icon">⚠️</div><p>'+escapeHtml(json.error?json.error.message:'エラー')+'</p></div>'; return; }
+    var users = json.data.users || [];
+    if (users.length === 0) { container.innerHTML='<div class="empty"><div class="icon">👤</div><p>管理者ユーザーなし</p></div>'; return; }
+    var html = '';
+    users.forEach(function(u) {
+      html += '<div class="admin-user-card">';
+      html += '<span class="role-badge '+u.role+'">'+u.role+'</span>';
+      html += '<div style="flex:1;"><div class="au-email">'+escapeHtml(u.email)+'</div><div class="au-name">'+escapeHtml(u.display_name||'-')+'</div></div>';
+      html += '<select onchange="updateAdminRole(\''+u.id+'\',this.value)">';
+      ['viewer','admin','super_admin'].forEach(function(r) {
+        html += '<option value="'+r+'"'+(r===u.role?' selected':'')+'>'+r+'</option>';
+      });
+      html += '</select>';
+      if (u.email !== currentUser.email) {
+        html += ' <button class="btn btn-danger btn-sm" onclick="deleteAdminUser(\''+u.id+'\',\''+escapeHtml(u.email)+'\')">削除</button>';
+      }
+      html += '<div style="font-size:10px;color:var(--s400);">'+((u.created_at||'').substring(0,10))+'</div>';
+      html += '</div>';
+    });
+    container.innerHTML = html;
+  } catch(e) { container.innerHTML='<div class="empty"><div class="icon">❌</div><p>'+e.message+'</p></div>'; }
+}
+
+async function createAdminUser() {
+  var email = document.getElementById('newAdminEmail').value.trim();
+  var pass = document.getElementById('newAdminPass').value;
+  var name = document.getElementById('newAdminName').value.trim();
+  var role = document.getElementById('newAdminRole').value;
+  if (!email || !pass) { toast('メールとパスワードは必須です','err'); return; }
+  if (pass.length < 6) { toast('パスワードは6文字以上必要です','err'); return; }
+  try {
+    var res = await adminPost('manage-users', { sub_action: 'create', email: email, password: pass, display_name: name, role: role });
+    var json = await res.json();
+    if (json.success) {
+      toast('管理者を作成しました: '+email, 'ok');
+      document.getElementById('addAdminForm').style.display = 'none';
+      document.getElementById('newAdminEmail').value = '';
+      document.getElementById('newAdminPass').value = '';
+      document.getElementById('newAdminName').value = '';
+      loadAdminUsers();
+    } else { toast(json.error?json.error.message:'作成に失敗しました', 'err'); }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+async function updateAdminRole(userId, newRole) {
+  try {
+    var res = await adminPost('manage-users', { sub_action: 'update', user_id: userId, role: newRole });
+    var json = await res.json();
+    if (json.success) { toast('ロールを更新しました', 'ok'); loadAdminUsers(); }
+    else { toast(json.error?json.error.message:'更新失敗', 'err'); loadAdminUsers(); }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+async function deleteAdminUser(userId, email) {
+  if (!confirm('管理者「'+email+'」を削除しますか？')) return;
+  try {
+    var res = await adminPost('manage-users', { sub_action: 'delete', user_id: userId });
+    var json = await res.json();
+    if (json.success) { toast('管理者を削除しました', 'ok'); loadAdminUsers(); }
+    else { toast(json.error?json.error.message:'削除失敗', 'err'); }
+  } catch(e) { toast('エラー: '+e.message, 'err'); }
+}
+
+// ═══ Init ═══
 window.addEventListener('DOMContentLoaded', function() {
-  var u=localStorage.getItem('pb_url'), k=localStorage.getItem('pb_key');
-  if(u&&k){ document.getElementById('inputUrl').value=u; document.getElementById('inputKey').value=k; SUPABASE_URL=u; SUPABASE_KEY=k; testConnection(); }
+  // API_BASE を自動設定（GitHub Pages → Supabase Edge Function）
+  API_BASE = 'https://yxtenqytvbmmbrzcllqk.supabase.co/functions/v1/api-admin';
+
+  // 既存 JWT で自動ログイン試行
+  var jwt = localStorage.getItem('admin_jwt');
+  var userJson = localStorage.getItem('admin_user');
+  if (jwt && userJson) {
+    try {
+      var user = JSON.parse(userJson);
+      // JWT 有効性確認
+      adminFetch('me').then(function(res) {
+        return res.json();
+      }).then(function(json) {
+        if (json.success) {
+          onLoginSuccess(json.data);
+        } else {
+          // JWT 期限切れ → ログイン画面表示
+          localStorage.removeItem('admin_jwt');
+          localStorage.removeItem('admin_user');
+          document.getElementById('loginOverlay').style.display = 'flex';
+        }
+      }).catch(function() {
+        document.getElementById('loginOverlay').style.display = 'flex';
+      });
+    } catch(e) {
+      document.getElementById('loginOverlay').style.display = 'flex';
+    }
+  } else {
+    document.getElementById('loginOverlay').style.display = 'flex';
+  }
 });
 
 // ═══ Changelog ═══
 var CHANGELOG = [
   {
-    ver: 'v0.5.2', date: '2026-02-20', current: true,
+    ver: 'v0.6.0', date: '2026-02-22', current: true,
+    title: '管理者認証 & ロールベースアクセス制御',
+    changes: [
+      { type: 'feat', text: 'Supabase Auth (email/password) によるログイン認証を追加' },
+      { type: 'feat', text: 'ロールベースアクセス制御 (RBAC): super_admin / admin / viewer' },
+      { type: 'feat', text: '管理者ユーザー管理画面 (super_admin のみ): 追加・ロール変更・削除' },
+      { type: 'feat', text: 'api-admin Edge Function: 認証 + データプロキシ API' },
+      { type: 'feat', text: 'admin_users テーブル: 管理者ロール管理' },
+      { type: 'improve', text: 'ANON KEY 手動入力を廃止 → JWT 認証に移行（セキュリティ向上）' },
+      { type: 'improve', text: 'サイドバー項目のロールベース表示/非表示制御' }
+    ]
+  },
+  {
+    ver: 'v0.5.2', date: '2026-02-20',
     title: 'DBスキーマ同期 & カラム修正',
     changes: [
       { type: 'fix', text: 'pet_families クエリの registered_at → created_at 修正（実DBカラム名に整合）' },
@@ -2190,6 +2451,24 @@ function closeChangelog() {
       <button class="cl-close" onclick="closeChangelog()">✕</button>
     </div>
     <div class="cl-body" id="clBody"></div>
+  </div>
+</div>
+
+<!-- ═══ Login Overlay ═══ -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <h1>🐾 PawBon Admin</h1>
+    <p>管理ダッシュボードにログイン</p>
+    <div class="field">
+      <label>メールアドレス</label>
+      <input type="email" id="loginEmail" placeholder="admin@example.com" onkeydown="if(event.key==='Enter')adminLogin()">
+    </div>
+    <div class="field">
+      <label>パスワード</label>
+      <input type="password" id="loginPass" placeholder="パスワード" onkeydown="if(event.key==='Enter')adminLogin()">
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="adminLogin()">ログイン</button>
+    <div class="login-error" id="loginError"></div>
   </div>
 </div>
 
