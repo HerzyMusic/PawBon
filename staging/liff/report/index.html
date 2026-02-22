@@ -48,6 +48,17 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .empty-state{text-align:center;padding:30px 16px;color:var(--s400);}
 .empty-state .icon{font-size:48px;margin-bottom:12px;}
 .footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
+.pet-card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);border-left:4px solid var(--teal);}
+.pet-card.has-worry{border-left-color:var(--amber);}
+.pet-card-header{font-size:16px;font-weight:800;margin-bottom:12px;}
+.pet-card-stats{display:flex;gap:8px;margin-bottom:12px;}
+.pet-stat{flex:1;background:var(--s100);border-radius:10px;padding:10px 6px;text-align:center;}
+.pet-stat-val{font-size:20px;font-weight:900;}
+.pet-stat-label{font-size:9px;color:var(--s400);margin-top:2px;}
+.pet-card-detail{font-size:12px;color:var(--s500);line-height:1.8;}
+.pet-card-allclear{font-size:14px;color:var(--teal-d);font-weight:700;text-align:center;padding:8px 0;}
+.symptom-tag{display:inline-block;padding:2px 8px;border-radius:10px;background:var(--amber-l);color:#92400E;font-size:11px;margin:0 2px;}
+.family-summary-card{font-size:14px;line-height:1.8;font-weight:700;}
 </style>
 </head>
 <body>
@@ -103,6 +114,10 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
+<div id="petsContent" style="display:none;">
+  <div class="section" id="petsView"></div>
+</div>
+
 <div class="footer">PawBon 元気チェック v0.4.3 Beta<br>© 2026 PawBon Inc.</div>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -113,6 +128,8 @@ var lineId = '';
 var familyCode = '';
 var allRecords = [];
 var currentYear, currentMonth;
+var urlParams = new URLSearchParams(window.location.search);
+var viewMode = urlParams.get('view');
 
 // ═══ LIFF ═══
 async function initLiff() {
@@ -158,29 +175,36 @@ async function loadReport() {
     var petNames = (data.petNames || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
     var petBreeds = (data.breeds || '').split(',').map(function(s){ return s.trim(); });
 
-    document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
-
-    // ペットタグ
-    document.getElementById('petTags').innerHTML = petNames.map(function(name, i) {
-      var breed = petBreeds[i] || '';
-      return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
-    }).join('');
-
-    document.getElementById('totalDays').textContent = data.totalDays || 0;
-    document.getElementById('streak').textContent = data.streak || 0;
-    document.getElementById('healthRate').textContent = (data.healthRate || 0) + '%';
-    document.getElementById('regionCount').textContent = data.regionCount || '—';
-    document.getElementById('regionArea').textContent = (data.area || '') + ' ' + (data.areaDetail || '');
-
     var now = new Date();
     currentYear = now.getFullYear();
     currentMonth = now.getMonth() + 1;
 
     document.getElementById('loading').style.display = 'none';
-    document.getElementById('content').style.display = 'block';
 
-    renderCalendar();
-    renderHistory();
+    if (viewMode === 'pets') {
+      document.querySelector('.header h1').textContent = '🐾 家族の様子';
+      document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気状況';
+      document.getElementById('petsContent').style.display = 'block';
+      renderPetsView(petNames, petBreeds, data);
+    } else {
+      document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
+
+      // ペットタグ
+      document.getElementById('petTags').innerHTML = petNames.map(function(name, i) {
+        var breed = petBreeds[i] || '';
+        return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
+      }).join('');
+
+      document.getElementById('totalDays').textContent = data.totalDays || 0;
+      document.getElementById('streak').textContent = data.streak || 0;
+      document.getElementById('healthRate').textContent = (data.healthRate || 0) + '%';
+      document.getElementById('regionCount').textContent = data.regionCount || '—';
+      document.getElementById('regionArea').textContent = (data.area || '') + ' ' + (data.areaDetail || '');
+
+      document.getElementById('content').style.display = 'block';
+      renderCalendar();
+      renderHistory();
+    }
 
   } catch (e) {
     document.getElementById('loading').innerHTML =
@@ -255,6 +279,123 @@ function renderHistory() {
       return '<div class="record-row"><span class="date">' + label + '</span><span class="status-w">⚠️ ' + detail + '</span></div>';
     }
   }).join('');
+}
+
+// ═══ Pets View（ペット別分析 / 宠物分析视图）═══
+function renderPetsView(petNames, petBreeds, data) {
+  var now = new Date();
+  var thirtyDaysAgo = new Date(now);
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  var thirtyDaysAgoStr = thirtyDaysAgo.toISOString().slice(0, 10);
+
+  var recentRecords = allRecords.filter(function(r) {
+    return getDate(r) >= thirtyDaysAgoStr;
+  });
+  var totalRecent = recentRecords.length;
+
+  var html = '';
+
+  petNames.forEach(function(name, i) {
+    var breed = petBreeds[i] || '';
+
+    // 心配レコード（過去30日）/ 最近30天的担心记录
+    var worryRecords = recentRecords.filter(function(r) {
+      return r.status === 'worry' && (r.worriedPets || r.worried_pets || '').indexOf(name) >= 0;
+    });
+    var worryCount = worryRecords.length;
+    var healthRate = totalRecent > 0 ? Math.round((totalRecent - worryCount) / totalRecent * 100) : 100;
+
+    // 元気連続日数（最新日から遡る）/ 连续健康天数
+    var streak = 0;
+    for (var j = 0; j < allRecords.length; j++) {
+      var r = allRecords[j];
+      if (r.status === 'worry' && (r.worriedPets || r.worried_pets || '').indexOf(name) >= 0) break;
+      streak++;
+    }
+
+    // 最終心配日 / 最后担心日期
+    var lastWorry = null;
+    for (var j = 0; j < allRecords.length; j++) {
+      var r = allRecords[j];
+      if (r.status === 'worry' && (r.worriedPets || r.worried_pets || '').indexOf(name) >= 0) {
+        lastWorry = getDate(r);
+        break;
+      }
+    }
+
+    // よくある症状（頻度上位3つ）/ 常见症状（前3）
+    var symptomCounts = {};
+    worryRecords.forEach(function(r) {
+      if (r.symptoms) {
+        r.symptoms.split(/[,、]/).forEach(function(s) {
+          s = s.trim();
+          if (s) symptomCounts[s] = (symptomCounts[s] || 0) + 1;
+        });
+      }
+    });
+    var topSymptoms = Object.keys(symptomCounts).sort(function(a, b) {
+      return symptomCounts[b] - symptomCounts[a];
+    }).slice(0, 3);
+
+    // ペットカード生成 / 生成宠物卡片
+    var cardClass = worryCount > 0 ? 'pet-card has-worry' : 'pet-card';
+    html += '<div class="' + cardClass + '">';
+    html += '<div class="pet-card-header">🐕 ' + escapeHtml(name) + (breed ? '（' + escapeHtml(breed) + '）' : '') + '</div>';
+    html += '<div class="pet-card-stats">';
+    html += '<div class="pet-stat"><div class="pet-stat-val teal">' + healthRate + '%</div><div class="pet-stat-label">元気率</div></div>';
+    html += '<div class="pet-stat"><div class="pet-stat-val amber">' + worryCount + '回</div><div class="pet-stat-label">心配回数</div></div>';
+    html += '<div class="pet-stat"><div class="pet-stat-val rose">' + streak + '日</div><div class="pet-stat-label">連続</div></div>';
+    html += '</div>';
+
+    if (worryCount > 0) {
+      html += '<div class="pet-card-detail">';
+      if (lastWorry) {
+        var wd = new Date(lastWorry);
+        html += '<div>最終心配日: ' + (wd.getMonth() + 1) + '/' + wd.getDate() + '</div>';
+      }
+      if (topSymptoms.length > 0) {
+        html += '<div>よくある症状: ' + topSymptoms.map(function(s) {
+          return '<span class="symptom-tag">' + escapeHtml(s) + '</span>';
+        }).join(' ') + '</div>';
+      }
+      html += '</div>';
+    } else {
+      html += '<div class="pet-card-allclear">✨ ずっと元気です！</div>';
+    }
+
+    html += '</div>';
+  });
+
+  // 家族全体サマリー / 家庭整体摘要
+  html += '<div class="section-title" style="margin-top:8px;">📊 家族全体サマリー</div>';
+  html += '<div class="card family-summary-card">';
+  html += '<div>トータル ' + (data.totalDays || 0) + '日 | 連続 ' + (data.streak || 0) + '日 🔥</div>';
+  html += '<div>家族全体の元気率: ' + (data.healthRate || 0) + '%</div>';
+  html += '</div>';
+
+  // 最近のチェック履歴（直近7件）/ 最近检查记录（最近7条）
+  html += '<div class="section-title" style="margin-top:8px;">📋 最近のチェック履歴（直近7件）</div>';
+  html += '<div class="card" style="padding:0 16px;">';
+  if (!allRecords || allRecords.length === 0) {
+    html += '<div style="padding:16px 0;text-align:center;color:var(--s400);font-size:12px;">まだチェック記録がありません</div>';
+  } else {
+    var weekdays = ['日','月','火','水','木','金','土'];
+    html += allRecords.slice(0, 7).map(function(r) {
+      var dateStr = getDate(r);
+      var d = new Date(dateStr);
+      var label = isNaN(d.getTime()) ? dateStr : ((d.getMonth()+1) + '/' + d.getDate() + '（' + weekdays[d.getDay()] + '）');
+      if (r.status === 'genki') {
+        return '<div class="record-row"><span class="date">' + label + '</span><span class="status-g">✅ 全員元気</span></div>';
+      } else {
+        var detail = escapeHtml(r.worriedPets || r.worried_pets || '心配');
+        if (r.symptoms) detail += '（' + escapeHtml(r.symptoms) + '）';
+        return '<div class="record-row"><span class="date">' + label + '</span><span class="status-w">⚠️ ' + detail + '</span></div>';
+      }
+    }).join('');
+  }
+  html += '</div>';
+
+  document.getElementById('petsView').innerHTML = html;
 }
 
 // ═══ Util ═══
