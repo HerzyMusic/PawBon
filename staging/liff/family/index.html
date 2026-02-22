@@ -484,10 +484,12 @@ async function loadFamily() {
     var allMembers = data.members || [];
     var recentCheckins = data.recentCheckins || [];
 
-    // bonus_slots/paid_slots/max_members は DB に無い場合 fallback
-    bonusSlots = 0;
-    paidSlots = 0;
-    FREE_SLOTS = 2;
+    // DB の名額データを API レスポンスから取得 / 从API响应获取名额数据
+    var maxMembers = data.maxMembers || 2;
+    bonusSlots = data.bonusSlots || 0;
+    paidSlots = data.paidSlots || 0;
+    FREE_SLOTS = maxMembers - bonusSlots - paidSlots;
+    if (FREE_SLOTS < 2) FREE_SLOTS = 2;
 
     // ownerLineId をメンバーリストから取得
     var ownerLineId = '';
@@ -502,7 +504,7 @@ async function loadFamily() {
     familyData = {
       role: role,
       familyCode: data.familyCode,
-      referralCode: '',
+      referralCode: data.referralCode || '',
       petNames: data.petNames,
       area: (data.area || '') + ' ' + (data.areaDetail || ''),
       ownerLineId: ownerLineId,
