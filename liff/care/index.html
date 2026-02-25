@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PawBon — 家族のケア</title>
+<style>
+:root{--rose:#E8475F;--teal:#2ECDA7;--teal-d:#1FA882;--teal-l:#EDFCF7;--amber:#FFB347;--amber-l:#FFF8EC;--orange:#FF7B54;--ink:#1A1A2E;--s500:#64748B;--s400:#94A3B8;--s200:#E2E8F0;--s100:#F1F5F9;--bg:#F8F6F3;--card:#FFF;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;padding-bottom:80px;}
+.header{background:var(--card);padding:16px;border-bottom:1px solid var(--s200);text-align:center;}
+.header h1{font-size:18px;font-weight:800;}
+.header p{font-size:12px;color:var(--s400);margin-top:2px;}
+
+/* タブ */
+.tabs{display:flex;background:var(--card);border-bottom:1px solid var(--s200);}
+.tab{flex:1;padding:12px 0;text-align:center;font-size:13px;font-weight:700;color:var(--s400);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;}
+.tab.active{color:var(--teal-d);border-bottom-color:var(--teal);}
+
+/* 共通 */
+.section{padding:16px;}
+.card{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);}
+.section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
+.loading{text-align:center;padding:60px 20px;color:var(--s400);}
+
+/* ケアボード */
+.checkin-status{padding:16px;border-radius:16px;margin-bottom:12px;text-align:center;font-weight:700;}
+.checkin-status.done{background:#DCFCE7;color:var(--teal-d);}
+.checkin-status.pending{background:var(--amber-l);color:#92400E;}
+.checkin-status .big{font-size:18px;margin-bottom:4px;}
+.checkin-status .sub{font-size:12px;font-weight:400;}
+
+.stat-row{display:flex;gap:8px;margin-bottom:16px;}
+.stat-box{flex:1;background:var(--s100);border-radius:14px;padding:14px 8px;text-align:center;}
+.stat-box .sv{font-size:24px;font-weight:900;}
+.stat-box .sv.rose{color:var(--rose);}
+.stat-box .sv.teal{color:var(--teal-d);}
+.stat-box .sv.amber{color:var(--amber);}
+.stat-box .sl{font-size:9px;color:var(--s400);margin-top:2px;}
+
+/* ケアグリッド */
+.care-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.care-item{background:var(--s100);border-radius:12px;padding:10px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--s500);}
+.care-item .icon{font-size:22px;margin-bottom:4px;}
+.care-item .count{font-size:16px;font-weight:900;color:var(--teal-d);}
+.care-item.has-log .count{color:var(--teal-d);}
+
+/* タイムライン */
+.tl-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--s100);}
+.tl-item:last-child{border:none;}
+.tl-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.tl-icon.care{background:var(--teal-l);}
+.tl-icon.genki{background:#DCFCE7;}
+.tl-icon.worry{background:#FEF3C7;}
+.tl-body{flex:1;min-width:0;}
+.tl-title{font-size:13px;font-weight:700;}
+.tl-meta{font-size:11px;color:var(--s400);margin-top:2px;}
+.tl-memo{font-size:11px;color:var(--s500);margin-top:4px;padding:6px 8px;background:var(--s100);border-radius:8px;}
+
+/* FAB */
+.fab{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--teal);color:#fff;border:none;font-size:28px;box-shadow:0 4px 12px rgba(46,205,167,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:100;}
+.fab:active{transform:scale(.92);}
+
+/* モーダル */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--card);width:100%;max-width:480px;border-radius:20px 20px 0 0;padding:20px;max-height:85vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:16px;text-align:center;}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--s400);}
+
+.form-label{font-size:12px;font-weight:700;color:var(--s500);margin-bottom:6px;margin-top:14px;}
+.pet-select{display:flex;flex-wrap:wrap;gap:8px;}
+.pet-chip{padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;background:var(--s100);color:var(--s500);border:2px solid transparent;cursor:pointer;transition:all .2s;}
+.pet-chip.selected{background:var(--teal-l);color:var(--teal-d);border-color:var(--teal);}
+.care-select{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+.care-chip{padding:10px 4px;border-radius:12px;text-align:center;font-size:11px;font-weight:600;background:var(--s100);color:var(--s500);border:2px solid transparent;cursor:pointer;transition:all .2s;}
+.care-chip .icon{font-size:20px;display:block;margin-bottom:2px;}
+.care-chip.selected{background:var(--teal-l);color:var(--teal-d);border-color:var(--teal);}
+.form-input{width:100%;padding:10px 12px;border:1px solid var(--s200);border-radius:10px;font-size:14px;margin-top:4px;outline:none;}
+.form-input:focus{border-color:var(--teal);}
+.btn-submit{width:100%;padding:14px;border:none;border-radius:14px;background:var(--teal);color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:20px;}
+.btn-submit:disabled{background:var(--s200);color:var(--s400);cursor:not-allowed;}
+.btn-submit:not(:disabled):active{background:var(--teal-d);}
+
+.member-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.member-tag{padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;background:var(--s100);color:var(--s500);}
+
+.empty-state{text-align:center;padding:30px 16px;color:var(--s400);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.footer{text-align:center;padding:24px;font-size:10px;color:var(--s400);}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🐾 家族のケア</h1>
+  <p id="headerSub">読み込み中...</p>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('board')">📋 ケアボード</div>
+  <div class="tab" onclick="switchTab('timeline')">📅 タイムライン</div>
+</div>
+
+<div id="loading" class="loading">
+  <div style="font-size:40px;margin-bottom:12px;">🐾</div>
+  <div>読み込み中...</div>
+</div>
+
+<!-- ===== ケアボード ===== -->
+<div id="boardView" style="display:none;">
+  <div class="section">
+    <!-- チェックイン状況 -->
+    <div id="checkinStatus" class="checkin-status pending">
+      <div class="big">⏳ まだチェックしていません</div>
+      <div class="sub">メニューから元気チェックしましょう</div>
+    </div>
+
+    <!-- 統計 -->
+    <div class="stat-row">
+      <div class="stat-box"><div class="sv rose" id="totalDays">0</div><div class="sl">トータル日数</div></div>
+      <div class="stat-box"><div class="sv teal" id="streak">0</div><div class="sl">連続日数 🔥</div></div>
+      <div class="stat-box"><div class="sv amber" id="healthRate">-</div><div class="sl">元気率</div></div>
+    </div>
+
+    <!-- メンバー -->
+    <div id="memberSection" style="display:none;">
+      <div class="section-title">👨‍👩‍👦 家族メンバー</div>
+      <div id="memberList" class="member-list"></div>
+    </div>
+
+    <!-- 今日のケア -->
+    <div class="section-title">📋 今日のケア</div>
+    <div id="careGrid" class="care-grid"></div>
+
+    <!-- 今日のケア詳細 -->
+    <div id="todayCareList" class="card" style="padding:0 16px;display:none;"></div>
+  </div>
+</div>
+
+<!-- ===== タイムライン ===== -->
+<div id="timelineView" style="display:none;">
+  <div class="section">
+    <div class="section-title">📅 直近7日のアクティビティ</div>
+    <div id="timelineList" class="card" style="padding:0 16px;"></div>
+  </div>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="openModal()" title="ケア記録">+</button>
+
+<!-- 記録モーダル -->
+<div class="modal-overlay" id="modal">
+  <div class="modal" style="position:relative;">
+    <button class="modal-close" onclick="closeModal()">&times;</button>
+    <div class="modal-title">📝 ケア記録</div>
+
+    <div class="form-label">🐾 ペットを選択</div>
+    <div id="modalPets" class="pet-select"></div>
+
+    <div class="form-label">ケアの種類</div>
+    <div id="modalCareTypes" class="care-select"></div>
+
+    <div class="form-label">メモ（任意）</div>
+    <input type="text" id="modalMemo" class="form-input" placeholder="例: 30分コース、公園で">
+
+    <button class="btn-submit" id="btnSubmit" disabled onclick="submitCare()">記録する</button>
+    <div id="submitMsg" style="text-align:center;font-size:12px;margin-top:8px;color:var(--s400);"></div>
+  </div>
+</div>
+
+<div class="footer">PawBon 元気チェック v0.5.0 Beta<br>&copy; 2026 PawBon Inc.</div>
+
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="../config.js"></script>
+<script>
+var API_BASE = PAWBON_CONFIG.API_BASE;
+var lineId = '';
+var boardData = null;
+var timelineData = null;
+var selectedPet = '';
+var selectedCare = '';
+
+var CARE_TYPES = [
+  { id: 'walk',     icon: '🐕', label: 'お散歩' },
+  { id: 'feed',     icon: '🍽️', label: 'ごはん' },
+  { id: 'medicine', icon: '💊', label: 'お薬' },
+  { id: 'bath',     icon: '🛁', label: 'お風呂' },
+  { id: 'vet',      icon: '🏥', label: '病院' },
+  { id: 'groom',    icon: '✂️', label: 'トリミング' },
+  { id: 'other',    icon: '📝', label: 'その他' },
+];
+
+// ═══ LIFF 初期化 ═══
+async function initLiff() {
+  try {
+    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    var profile = await liff.getProfile();
+    lineId = profile.userId;
+  } catch (e) {
+    lineId = 'debug_user_' + Date.now();
+  }
+  loadBoard();
+}
+initLiff();
+
+// ═══ ケアボード読み込み ═══
+async function loadBoard() {
+  try {
+    var res = await fetch(API_BASE + '/api-care-board?lineId=' + encodeURIComponent(lineId));
+    var json = await res.json();
+    if (!json.success) {
+      document.getElementById('loading').innerHTML =
+        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
+      return;
+    }
+    boardData = json.data;
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('boardView').style.display = 'block';
+    renderBoard();
+  } catch (e) {
+    document.getElementById('loading').innerHTML =
+      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+  }
+}
+
+function renderBoard() {
+  var d = boardData;
+  var petNames = d.petNames || [];
+
+  document.getElementById('headerSub').textContent = petNames.join('、') + ' のケア状況';
+
+  // チェックイン状況
+  var csEl = document.getElementById('checkinStatus');
+  if (d.checkedInToday) {
+    csEl.className = 'checkin-status done';
+    var byText = d.checkedBy && d.checkedBy.name ? '（' + escapeHtml(d.checkedBy.name) + '）' : '';
+    csEl.innerHTML = '<div class="big">✅ 今日のチェック完了' + byText + '</div>' +
+      '<div class="sub">みんな元気ですよ！</div>';
+  } else {
+    csEl.className = 'checkin-status pending';
+    csEl.innerHTML = '<div class="big">⏳ まだチェックしていません</div>' +
+      '<div class="sub">メニューから元気チェックしましょう</div>';
+  }
+
+  // 統計
+  document.getElementById('totalDays').textContent = d.stats.totalDays || 0;
+  document.getElementById('streak').textContent = d.stats.streak || 0;
+  document.getElementById('healthRate').textContent = (d.stats.healthRate || 0) + '%';
+
+  // メンバー
+  if (d.members && d.members.length > 0) {
+    document.getElementById('memberSection').style.display = 'block';
+    document.getElementById('memberList').innerHTML = d.members.map(function(m) {
+      return '<span class="member-tag">👤 ' + escapeHtml(m.displayName) + '（' + escapeHtml(m.relation) + '）</span>';
+    }).join('');
+  }
+
+  // 今日のケアグリッド
+  var todayLogs = d.todayCareLogs || [];
+  var careCounts = {};
+  todayLogs.forEach(function(log) {
+    careCounts[log.care_type] = (careCounts[log.care_type] || 0) + 1;
+  });
+
+  document.getElementById('careGrid').innerHTML = CARE_TYPES.slice(0, 4).map(function(ct) {
+    var count = careCounts[ct.id] || 0;
+    var cls = count > 0 ? 'care-item has-log' : 'care-item';
+    return '<div class="' + cls + '"><div class="icon">' + ct.icon + '</div>' +
+      '<div class="count">' + count + '</div>' + ct.label + '</div>';
+  }).join('');
+
+  // 今日のケア詳細
+  if (todayLogs.length > 0) {
+    var listEl = document.getElementById('todayCareList');
+    listEl.style.display = 'block';
+    listEl.innerHTML = todayLogs.map(function(log) {
+      var ct = CARE_TYPES.find(function(c) { return c.id === log.care_type; });
+      var icon = ct ? ct.icon : '📋';
+      var label = ct ? ct.label : log.care_type;
+      var time = new Date(log.care_time);
+      var timeStr = time.getHours() + ':' + String(time.getMinutes()).padStart(2, '0');
+      return '<div class="tl-item">' +
+        '<div class="tl-icon care">' + icon + '</div>' +
+        '<div class="tl-body"><div class="tl-title">' + escapeHtml(log.pet_name) + ' — ' + label + '</div>' +
+        '<div class="tl-meta">' + timeStr + '</div>' +
+        (log.memo ? '<div class="tl-memo">' + escapeHtml(log.memo) + '</div>' : '') +
+        '</div></div>';
+    }).join('');
+  }
+}
+
+// ═══ タイムライン ═══
+async function loadTimeline() {
+  if (timelineData) { renderTimeline(); return; }
+  try {
+    var res = await fetch(API_BASE + '/api-care-log?lineId=' + encodeURIComponent(lineId) + '&days=7');
+    var json = await res.json();
+    if (json.success) {
+      timelineData = json.data.logs || [];
+      renderTimeline();
+    }
+  } catch (e) {
+    document.getElementById('timelineList').innerHTML =
+      '<div style="padding:16px;text-align:center;color:var(--s400);">読み込みエラー</div>';
+  }
+}
+
+function renderTimeline() {
+  var list = timelineData || [];
+  var el = document.getElementById('timelineList');
+
+  if (list.length === 0) {
+    el.innerHTML = '<div style="padding:16px;text-align:center;color:var(--s400);font-size:12px;">まだ記録がありません</div>';
+    return;
+  }
+
+  el.innerHTML = list.map(function(item) {
+    var time = new Date(item.time);
+    var dateStr = (time.getMonth() + 1) + '/' + time.getDate();
+    var timeStr = time.getHours() + ':' + String(time.getMinutes()).padStart(2, '0');
+
+    if (item.type === 'care') {
+      var ct = CARE_TYPES.find(function(c) { return c.id === item.careType; });
+      var icon = ct ? ct.icon : '📋';
+      var label = ct ? ct.label : item.careType;
+      return '<div class="tl-item">' +
+        '<div class="tl-icon care">' + icon + '</div>' +
+        '<div class="tl-body"><div class="tl-title">' + escapeHtml(item.petName) + ' — ' + label + '</div>' +
+        '<div class="tl-meta">' + dateStr + ' ' + timeStr + '</div>' +
+        (item.memo ? '<div class="tl-memo">' + escapeHtml(item.memo) + '</div>' : '') +
+        '</div></div>';
+    } else {
+      // checkin
+      var iconClass = item.status === 'genki' ? 'genki' : 'worry';
+      var statusIcon = item.status === 'genki' ? '✅' : '⚠️';
+      var statusText = item.status === 'genki' ? '全員元気' : '心配';
+      if (item.status === 'worry' && item.worriedPets) statusText = item.worriedPets;
+      var byText = item.checkedByName ? '（' + escapeHtml(item.checkedByName) + '）' : '';
+      return '<div class="tl-item">' +
+        '<div class="tl-icon ' + iconClass + '">' + statusIcon + '</div>' +
+        '<div class="tl-body"><div class="tl-title">元気チェック' + byText + '</div>' +
+        '<div class="tl-meta">' + dateStr + ' — ' + statusText + '</div>' +
+        (item.symptoms ? '<div class="tl-memo">' + escapeHtml(item.symptoms) + '</div>' : '') +
+        '</div></div>';
+    }
+  }).join('');
+}
+
+// ═══ タブ切替 ═══
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(function(el, i) {
+    el.classList.toggle('active', (i === 0 && name === 'board') || (i === 1 && name === 'timeline'));
+  });
+  document.getElementById('boardView').style.display = name === 'board' ? 'block' : 'none';
+  document.getElementById('timelineView').style.display = name === 'timeline' ? 'block' : 'none';
+  if (name === 'timeline') loadTimeline();
+}
+
+// ═══ モーダル ═══
+function openModal() {
+  if (!boardData) return;
+  selectedPet = '';
+  selectedCare = '';
+  document.getElementById('modalMemo').value = '';
+  document.getElementById('submitMsg').textContent = '';
+  document.getElementById('btnSubmit').disabled = true;
+
+  // ペット選択
+  var petNames = boardData.petNames || [];
+  document.getElementById('modalPets').innerHTML = petNames.map(function(name) {
+    return '<div class="pet-chip" onclick="selectPet(this,\'' + escapeAttr(name) + '\')">' + escapeHtml(name) + '</div>';
+  }).join('');
+
+  // ケアタイプ選択
+  document.getElementById('modalCareTypes').innerHTML = CARE_TYPES.map(function(ct) {
+    return '<div class="care-chip" onclick="selectCare(this,\'' + ct.id + '\')">' +
+      '<span class="icon">' + ct.icon + '</span>' + ct.label + '</div>';
+  }).join('');
+
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function selectPet(el, name) {
+  selectedPet = name;
+  document.querySelectorAll('.pet-chip').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  updateSubmitState();
+}
+
+function selectCare(el, id) {
+  selectedCare = id;
+  document.querySelectorAll('.care-chip').forEach(function(c) { c.classList.remove('selected'); });
+  el.classList.add('selected');
+  updateSubmitState();
+}
+
+function updateSubmitState() {
+  document.getElementById('btnSubmit').disabled = !(selectedPet && selectedCare);
+}
+
+async function submitCare() {
+  var btn = document.getElementById('btnSubmit');
+  var msg = document.getElementById('submitMsg');
+  btn.disabled = true;
+  msg.textContent = '送信中...';
+
+  try {
+    var res = await fetch(API_BASE + '/api-care-log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        lineId: lineId,
+        petName: selectedPet,
+        careType: selectedCare,
+        memo: document.getElementById('modalMemo').value.trim(),
+      }),
+    });
+    var json = await res.json();
+    if (json.success) {
+      msg.style.color = 'var(--teal-d)';
+      msg.textContent = '✅ 記録しました！';
+      // データ更新
+      boardData = null;
+      timelineData = null;
+      setTimeout(function() {
+        closeModal();
+        document.getElementById('loading').style.display = 'block';
+        document.getElementById('boardView').style.display = 'none';
+        loadBoard();
+      }, 800);
+    } else {
+      msg.style.color = 'var(--rose)';
+      msg.textContent = '❌ ' + (json.error ? json.error.message : 'エラー');
+      btn.disabled = false;
+    }
+  } catch (e) {
+    msg.style.color = 'var(--rose)';
+    msg.textContent = '❌ 通信エラー';
+    btn.disabled = false;
+  }
+}
+
+// ═══ Util ═══
+function escapeHtml(s) {
+  var d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+function escapeAttr(s) {
+  return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+</script>
+</body>
+</html>

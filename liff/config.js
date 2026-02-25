@@ -68,6 +68,7 @@ const PAWBON_CONFIG = {
     familyJoin:  '2009150735-NwzuWNub',
     worry:       '2009150735-o8ZaIkmY',
     report:      '2009150735-xVqRCfBp',
+    care:        '2009150735-xVqRCfBp',  // report と同じ LIFF ID を流用
     family:      '2009150735-zbmCgJZv',
     settings:    '2009150735-GT1YvHUH',
   } : {
@@ -76,6 +77,7 @@ const PAWBON_CONFIG = {
     familyJoin:  '2009188008-FTihZzkt',
     worry:       '2009188008-0fXNW2aC',
     report:      '2009188008-87cLzkKc',
+    care:        '2009188008-87cLzkKc',  // report と同じ LIFF ID を流用
     family:      '2009188008-c4NLtOwb',
     settings:    '2009188008-HmSCR5ng',
   },
