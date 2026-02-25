@@ -320,10 +320,11 @@ function renderBoard() {
       var label = ct ? ct.label : log.care_type;
       var time = new Date(log.care_time);
       var timeStr = time.getHours() + ':' + String(time.getMinutes()).padStart(2, '0');
+      var byName = log.recorded_by_name ? '（' + escapeHtml(log.recorded_by_name) + '）' : '';
       return '<div class="tl-item">' +
         '<div class="tl-icon care">' + icon + '</div>' +
         '<div class="tl-body"><div class="tl-title">' + escapeHtml(log.pet_name) + ' — ' + label + '</div>' +
-        '<div class="tl-meta">' + timeStr + '</div>' +
+        '<div class="tl-meta">' + timeStr + ' 👤 ' + byName + '</div>' +
         (log.memo ? '<div class="tl-memo">' + escapeHtml(log.memo) + '</div>' : '') +
         '</div></div>';
     }).join('');
@@ -364,9 +365,10 @@ function renderTimeline() {
       var ct = CARE_TYPES.find(function(c) { return c.id === item.careType; });
       var icon = ct ? ct.icon : '📋';
       var label = ct ? ct.label : item.careType;
+      var careBy = item.recordedByName ? '（' + escapeHtml(item.recordedByName) + '）' : '';
       return '<div class="tl-item">' +
         '<div class="tl-icon care">' + icon + '</div>' +
-        '<div class="tl-body"><div class="tl-title">' + escapeHtml(item.petName) + ' — ' + label + '</div>' +
+        '<div class="tl-body"><div class="tl-title">' + escapeHtml(item.petName) + ' — ' + label + careBy + '</div>' +
         '<div class="tl-meta">' + dateStr + ' ' + timeStr + '</div>' +
         (item.memo ? '<div class="tl-memo">' + escapeHtml(item.memo) + '</div>' : '') +
         '</div></div>';
