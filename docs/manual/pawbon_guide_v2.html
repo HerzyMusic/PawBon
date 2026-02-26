@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PawBon 使い方ガイド v2</title>
+<style>
+:root {
+  --rose: #E8475F;
+  --teal: #2ECDA7;
+  --teal-d: #1FA882;
+  --teal-l: #EDFCF7;
+  --amber: #FFB347;
+  --orange: #FF7B54;
+  --ink: #1A1A2E;
+  --s500: #64748B;
+  --s400: #94A3B8;
+  --s200: #E2E8F0;
+  --s100: #F1F5F9;
+  --bg: #F8F6F3;
+  --card: #FFF;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans CJK JP', 'Noto Sans JP', sans-serif;
+  background: white;
+  color: var(--ink);
+  font-size: 11pt;
+  line-height: 1.6;
+}
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 18mm 16mm 22mm;
+  margin: 0 auto;
+  background: white;
+  page-break-after: always;
+  position: relative;
+  overflow: hidden;
+}
+.page:last-child { page-break-after: avoid; }
+@media print {
+  .page { margin: 0; padding: 15mm 14mm 20mm; }
+}
+
+/* COVER */
+.cover {
+  background: linear-gradient(145deg, #FFF0F2 0%, #F8F6F3 45%, #EDFCF7 100%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+}
+.cover-logo { font-size: 68pt; margin-bottom: 6mm; line-height: 1; }
+.cover-brand { font-size: 34pt; font-weight: 900; color: var(--ink); letter-spacing: -1px; }
+.cover-brand span { color: var(--rose); }
+.cover-tagline { font-size: 12pt; color: var(--s500); margin-top: 3mm; }
+.cover-divider { width: 55mm; height: 3px; background: linear-gradient(90deg, var(--rose), var(--teal)); border-radius: 2px; margin: 7mm auto; }
+.cover-title { font-size: 17pt; font-weight: 900; color: var(--ink); margin-bottom: 2mm; }
+.cover-subtitle { font-size: 10.5pt; color: var(--s500); }
+.cover-badge { display: inline-block; background: var(--rose); color: white; font-size: 9pt; font-weight: 700; padding: 3px 12px; border-radius: 20px; margin-top: 3mm; }
+.cover-version { position: absolute; bottom: 10mm; right: 16mm; font-size: 8pt; color: var(--s400); }
+
+/* PAGE HEADER */
+.page-header { display: flex; align-items: center; gap: 3mm; padding-bottom: 3.5mm; border-bottom: 2px solid var(--s200); margin-bottom: 5mm; }
+.page-header-icon { font-size: 18pt; }
+.page-header-title { font-size: 15pt; font-weight: 900; }
+.page-num { margin-left: auto; font-size: 9pt; color: var(--s400); }
+
+/* SECTION TITLE */
+.sec { font-size: 11.5pt; font-weight: 900; color: var(--teal-d); margin: 4.5mm 0 2.5mm; display: flex; align-items: center; gap: 2mm; }
+.sec::before { content: ''; display: inline-block; width: 4px; height: 15px; background: linear-gradient(to bottom, var(--teal), var(--teal-d)); border-radius: 2px; flex-shrink: 0; }
+
+/* BOXES */
+.box { border-radius: 11px; padding: 4mm; margin-bottom: 3.5mm; }
+.box.teal { background: var(--teal-l); border: 1.5px solid var(--teal); }
+.box.rose { background: #FFF0F2; border: 1.5px solid rgba(232,71,95,.3); }
+.box.amber { background: #FFF8EC; border: 1.5px solid var(--amber); }
+.box.gray { background: var(--s100); border: 1px solid var(--s200); }
+.box-title { font-size: 9.5pt; font-weight: 700; margin-bottom: 1.5mm; }
+.box.teal .box-title { color: var(--teal-d); }
+.box.rose .box-title { color: var(--rose); }
+.box.amber .box-title { color: var(--orange); }
+
+/* STEP LIST */
+.steps { display: flex; flex-direction: column; gap: 2.5mm; }
+.step { display: flex; gap: 3.5mm; align-items: flex-start; }
+.step-n { flex-shrink: 0; width: 7mm; height: 7mm; border-radius: 50%; background: var(--teal); color: white; font-size: 9.5pt; font-weight: 900; display: flex; align-items: center; justify-content: center; margin-top: 0.3mm; }
+.step-n.rose { background: var(--rose); }
+.step-t { font-size: 10pt; font-weight: 700; margin-bottom: 0.8mm; }
+.step-d { font-size: 9pt; color: var(--s500); line-height: 1.65; }
+
+/* TABLE */
+.tbl { width: 100%; border-collapse: collapse; font-size: 9pt; margin: 2.5mm 0; }
+.tbl th { background: var(--ink); color: white; padding: 2.5mm 3mm; text-align: left; font-size: 8.5pt; }
+.tbl td { padding: 2.5mm 3mm; border-bottom: 1px solid var(--s200); vertical-align: top; }
+.tbl tr:last-child td { border: none; }
+.tbl tr:nth-child(even) td { background: var(--s100); }
+.ico-cell { text-align: center; font-size: 13pt; width: 9mm; }
+.td-name { font-weight: 700; }
+.td-desc { color: var(--s500); font-size: 8.5pt; }
+
+/* ICON CARDS */
+.icon-row { display: flex; gap: 3mm; margin: 2.5mm 0; flex-wrap: wrap; }
+.icon-card { flex: 1; min-width: 28mm; background: white; border: 1.5px solid var(--s200); border-radius: 10px; padding: 3mm; text-align: center; }
+.icon-card .ie { font-size: 18pt; display: block; margin-bottom: 1mm; }
+.icon-card .il { font-size: 8.5pt; font-weight: 700; display: block; margin-bottom: 0.8mm; }
+.icon-card .id { font-size: 7.5pt; color: var(--s400); line-height: 1.5; }
+
+/* FLOW */
+.flow { display: flex; align-items: center; gap: 1.5mm; flex-wrap: wrap; margin: 2.5mm 0; }
+.flow-box { background: var(--teal-l); border: 1.5px solid var(--teal); border-radius: 7px; padding: 2mm 3.5mm; font-size: 8.5pt; font-weight: 700; color: var(--teal-d); text-align: center; }
+.flow-box.rose { background: #FFF0F2; border-color: rgba(232,71,95,.3); color: var(--rose); }
+.flow-arr { color: var(--s400); font-size: 11pt; font-weight: 900; }
+
+/* CHECK LIST */
+.cl { list-style: none; }
+.cl li { display: flex; align-items: flex-start; gap: 2mm; padding: 1.2mm 0; font-size: 9.5pt; border-bottom: 1px solid var(--s100); }
+.cl li:last-child { border: none; }
+.cl li::before { content: '✅'; flex-shrink: 0; }
+
+/* BADGE */
+.badge { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 7.5pt; font-weight: 700; }
+.badge.teal { background: var(--teal-l); color: var(--teal-d); }
+.badge.rose { background: #FFF0F2; color: var(--rose); }
+.badge.amber { background: #FFF8EC; color: var(--orange); }
+
+/* CODE */
+.code { font-family: 'Courier New', monospace; background: var(--s100); padding: 1px 5px; border-radius: 4px; font-size: 9pt; color: var(--rose); letter-spacing: 2px; font-weight: 700; }
+
+/* FAQ */
+.faq { margin-bottom: 3.5mm; border-radius: 9px; overflow: hidden; border: 1px solid var(--s200); }
+.faq-q { background: var(--s100); padding: 2.5mm 3.5mm; font-size: 9.5pt; font-weight: 700; display: flex; gap: 2mm; }
+.faq-q::before { content: 'Q.'; color: var(--rose); font-weight: 900; flex-shrink: 0; }
+.faq-a { background: white; padding: 2.5mm 3.5mm; font-size: 9pt; color: var(--s500); line-height: 1.6; display: flex; gap: 2mm; }
+.faq-a::before { content: 'A.'; color: var(--teal-d); font-weight: 900; flex-shrink: 0; }
+
+/* LAYOUT */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5mm; margin: 2.5mm 0; }
+.small { font-size: 8pt; color: var(--s400); }
+
+/* CARE GRID VISUAL */
+.care-grid-visual { display: grid; grid-template-columns: repeat(4,1fr); gap: 2mm; margin: 2.5mm 0; }
+.care-tile { background: var(--s100); border-radius: 9px; padding: 2.5mm 1.5mm; text-align: center; }
+.care-tile .ct-icon { font-size: 14pt; display: block; margin-bottom: 1mm; }
+.care-tile .ct-name { font-size: 7.5pt; font-weight: 700; color: var(--s500); }
+.care-tile.done { background: var(--teal-l); border: 1.5px solid var(--teal); }
+.care-tile.done .ct-name { color: var(--teal-d); }
+
+/* PHONE MOCK */
+.phone-wrap { display: flex; gap: 4mm; align-items: flex-start; margin: 2.5mm 0; }
+.phone { flex-shrink: 0; width: 40mm; border: 2.5px solid #1A1A2E; border-radius: 9px; padding: 1.5mm; overflow: hidden; background: white; }
+.phone-notch { width: 12mm; height: 2.5px; background: #1A1A2E; border-radius: 2px; margin: 1mm auto 1.5mm; }
+.phone-scr { background: var(--bg); border-radius: 5px; min-height: 36mm; overflow: hidden; }
+.scr-head { background: white; padding: 1.5mm 2mm; border-bottom: 1px solid var(--s200); text-align: center; font-size: 7pt; font-weight: 900; }
+.scr-body { padding: 1.5mm 2mm; }
+.phone-desc { flex: 1; font-size: 9pt; color: var(--s500); line-height: 1.7; }
+.phone-desc strong { color: var(--ink); }
+
+/* PAGE FOOTER */
+.page-footer { position: absolute; bottom: 7mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: var(--s400); border-top: 1px solid var(--s200); padding-top: 2.5mm; }
+
+/* TIMELINE VISUAL */
+.tl-visual { position: relative; padding-left: 7mm; }
+.tl-visual::before { content: ''; position: absolute; left: 2.5mm; top: 2mm; bottom: 2mm; width: 1.5px; background: var(--s200); }
+.tl-row { position: relative; margin-bottom: 3mm; padding-left: 4mm; }
+.tl-dot { position: absolute; left: -4.8mm; top: 1.5mm; width: 4mm; height: 4mm; border-radius: 50%; border: 1.5px solid white; }
+.tl-dot.teal { background: var(--teal); }
+.tl-dot.amber { background: var(--amber); }
+.tl-dot.rose { background: var(--rose); }
+.tl-cnt { background: white; border: 1px solid var(--s200); border-radius: 7px; padding: 1.5mm 2.5mm; }
+.tl-who { font-size: 8.5pt; font-weight: 700; }
+.tl-what { font-size: 8pt; color: var(--s500); margin-top: 0.5mm; }
+.tl-time { font-size: 7.5pt; color: var(--s300); margin-top: 1mm; }
+</style>
+</head>
+<body>
+
+<!-- ======================================
+     PAGE 1: COVER
+     ====================================== -->
+<div class="page cover">
+  <div class="cover-logo">🐾</div>
+  <div class="cover-brand">Paw<span>Bon</span></div>
+  <div class="cover-tagline">毎日のペットの元気を、家族みんなで見守ろう</div>
+  <div class="cover-divider"></div>
+  <div class="cover-title">使い方ガイド</div>
+  <div class="cover-subtitle">はじめてお使いになる方へ</div>
+  <div class="cover-badge">内部配布資料</div>
+  <div class="cover-version">ver 2.0 · 2026年2月 · © 2026 PawBon</div>
+</div>
+
+<!-- ======================================
+     PAGE 2: PawBon とは？
+     ====================================== -->
+<div class="page">
+  <div class="page-header">
+    <span class="page-header-icon">📖</span>
+    <span class="page-header-title">PawBon とは？</span>
+    <span class="page-num">1 / 6</span>
+  </div>
+
+  <div class="box teal">
+    <div class="box-title">🐾 PawBon は「ペット見守り&ケア協働」サービスです</div>
+    <p style="font-size:10pt;">LINEだけで使えるペット向け生活ログサービス。毎日の元気チェックはもちろん、散歩・ごはん・お薬などのケアを家族みんなで記録・共有できます。</p>
+  </div>
+
+  <div class="sec">こんな方に</div>
+  <div class="two-col">
+    <div class="box gray" style="margin-bottom:0;">
+      <div class="box-title" style="color:var(--ink);">🏠 オーナー（飼い主さん）</div>
+      <ul class="cl">
+        <li>毎日の健康記録をつけたい</li>
+        <li>ケアを家族と分担したい</li>
+        <li>遠くの家族にペットの様子を伝えたい</li>
+      </ul>
+    </div>
+    <div class="box gray" style="margin-bottom:0;">
+      <div class="box-title" style="color:var(--ink);">👪 家族メンバー</div>
+      <ul class="cl">
+        <li>離れた家族のペットが心配</li>
+        <li>ケアに積極的に参加したい</li>
+        <li>アプリ不要ですぐ使いたい</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec">5つの特徴</div>
+  <div class="icon-row">
+    <div class="icon-card">
+      <span class="ie">⚡</span>
+      <span class="il">1タップで完了</span>
+      <span class="id">毎日30秒で<br>チェック完了</span>
+    </div>
+    <div class="icon-card">
+      <span class="ie">👪</span>
+      <span class="il">家族で協働</span>
+      <span class="id">ケアを<br>みんなで分担</span>
+    </div>
+    <div class="icon-card">
+      <span class="ie">💌</span>
+      <span class="il">自動通知</span>
+      <span class="id">ケア記録で<br>家族へお知らせ</span>
+    </div>
+    <div class="icon-card">
+      <span class="ie">📱</span>
+      <span class="il">LINEのみ</span>
+      <span class="id">アプリ不要<br>インストール不要</span>
+    </div>
+    <div class="icon-card">
+      <span class="ie">🆓</span>
+      <span class="il">基本無料</span>
+      <span class="id">家族2名まで<br>完全無料</span>
+    </div>
+  </div>
+
+  <div class="sec">全体フロー</div>
+  <div class="flow">
+    <div class="flow-box">① LINE<br>友だち追加</div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box">② ペット情報<br>登録</div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box">③ 家族を<br>招待</div>
+    <div class="flow-arr">→</div>
+    <div class="flow-box rose">④ 毎日<br>チェック&ケア記録</div>
+  </div>
+  <p class="small" style="margin-top:2mm;">💡 家族メンバーは招待リンクから直接参加できます（登録不要）</p>
+
+  <div class="page-footer">
+    <span>🐾 PawBon 使い方ガイド v2.0</span>
+    <span>© 2026 PawBon Inc.</span>
+  </div>
+</div>
+
+<!-- ======================================
+     PAGE 3: はじめ方
+     ====================================== -->
+<div class="page">
+  <div class="page-header">
+    <span class="page-header-icon">🚀</span>
+    <span class="page-header-title">はじめ方</span>
+    <span class="page-num">2 / 6</span>
+  </div>
+
+  <div class="sec">A. ペットオーナーとして登録する</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">1</div>
+      <div>
+        <div class="step-t">PawBon を LINE で友だち追加する</div>
+        <div class="step-d">LINEの「友だち追加」→「ID検索」から <strong>@pawbon</strong> を検索、または担当者から受け取ったURLをタップしてください。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div>
+        <div class="step-t">メニューの「📝 ペット登録」をタップ</div>
+        <div class="step-d">トーク画面下部のリッチメニューから「📝 ペット登録」を選んで登録フォームを開きます。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div>
+        <div class="step-t">3ステップで情報を入力する</div>
+        <div class="step-d">
+          <strong>STEP 1</strong>：お名前 → ペット頭数・名前・種類を入力<br>
+          <strong>STEP 2</strong>：都道府県・市区町村を選択（紹介コードがあればここで入力）<br>
+          <strong>STEP 3</strong>：確認して「✅ この内容で登録する」をタップ
+        </div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">4</div>
+      <div>
+        <div class="step-t">「家族コード」が表示されたら登録完了</div>
+        <div class="step-d"><span class="code">P-XXXX</span> 形式のコードが発行されます。家族を招待するときに使うので手元に控えておいてください。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box amber" style="margin-top:3mm; margin-bottom:4mm;">
+    <div class="box-title">⚠️ ご注意</div>
+    <p style="font-size:9pt;">登録に使用したLINEアカウントが「オーナー」となります。スマホを機種変更した場合も、同じLINEアカウントでログインすれば引き続き使えます。</p>
+  </div>
+
+  <div class="sec">B. 家族メンバーとして参加する</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n rose">1</div>
+      <div>
+        <div class="step-t">オーナーから招待カードまたは家族コードをもらう</div>
+        <div class="step-d">LINEで送られてくる招待カード、またはコード（例：<span class="code">P-8472</span>）を確認してください。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n rose">2</div>
+      <div>
+        <div class="step-t">PawBon を LINE で友だち追加する</div>
+        <div class="step-d">招待カードの緑ボタン「🐾 PawBonを友だち追加する」をタップ。</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n rose">3</div>
+      <div>
+        <div class="step-t">コード入力 → 続柄選択 → 完了</div>
+        <div class="step-d">招待カードの赤いボタン「👪 家族として参加する」をタップ→コードが自動入力→続柄（パパ・ママ等）を選んで参加完了。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <span>🐾 PawBon 使い方ガイド v2.0</span>
+    <span>© 2026 PawBon Inc.</span>
+  </div>
+</div>
+
+<!-- ======================================
+     PAGE 4: 毎日の使い方（元気チェック）
+     ====================================== -->
+<div class="page">
+  <div class="page-header">
+    <span class="page-header-icon">✅</span>
+    <span class="page-header-title">毎日の使い方 — 元気チェック</span>
+    <span class="page-num">3 / 6</span>
+  </div>
+
+  <div class="sec">LINE メニュー一覧（オーナー）</div>
+  <table class="tbl">
+    <tr>
+      <th class="ico-cell"></th>
+      <th>メニュー名</th>
+      <th>できること</th>
+    </tr>
+    <tr>
+      <td class="ico-cell">✅</td>
+      <td class="td-name">元気チェック</td>
+      <td class="td-desc">今日の元気を報告（メイン機能）</td>
+    </tr>
+    <tr>
+      <td class="ico-cell">⚠️</td>
+      <td class="td-name">心配な子がいる</td>
+      <td class="td-desc">症状・気になる点を報告</td>
+    </tr>
+    <tr>
+      <td class="ico-cell">🐾</td>
+      <td class="td-name">家族のケア</td>
+      <td class="td-desc">ケアボード・活動記録・タイムライン <span class="badge teal">NEW</span></td>
+    </tr>
+    <tr>
+      <td class="ico-cell">👪</td>
+      <td class="td-name">家族</td>
+      <td class="td-desc">メンバー管理・招待・家族コード表示</td>
+    </tr>
+    <tr>
+      <td class="ico-cell">📊</td>
+      <td class="td-name">元気レポート</td>
+      <td class="td-desc">月間カレンダー・統計・ペット別分析</td>
+    </tr>
+    <tr>
+      <td class="ico-cell">📝</td>
+      <td class="td-name">ペット登録</td>
+      <td class="td-desc">ペット情報の編集・追加</td>
+    </tr>
+    <tr>
+      <td class="ico-cell">⚙️</td>
+      <td class="td-name">設定</td>
+      <td class="td-desc">通知・プロフィール・地域設定</td>
+    </tr>
+  </table>
+
+  <div class="sec">元気チェックの手順</div>
+  <div class="phone-wrap">
+    <div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n">1</div>
+          <div>
+            <div class="step-t">「✅ 元気チェック」をタップ</div>
+            <div class="step-d">LINE下部メニューから選択</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">2</div>
+          <div>
+            <div class="step-t">「全員元気です！」をタップ</div>
+            <div class="step-d">大きな緑ボタンをタップするだけ。これで完了（毎日1回）</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-n">3</div>
+          <div>
+            <div class="step-t">心配な子がいる場合は「⚠️ 心配な子がいる」</div>
+            <div class="step-d">症状（食欲不振・嘔吐・下痢など）を選択して記録。家族全員に即時通知が届きます。</div>
+          </div>
+        </div>
+      </div>
+      <div class="box teal" style="margin-top:3mm;">
+        <div class="box-title">💌 家族への通知タイミング</div>
+        <ul style="font-size:8.5pt; padding-left:4mm; color:var(--teal-d); line-height:2;">
+          <li>心配な子を報告した時 → 即時通知</li>
+          <li>3日間チェックなし → 自動アラート通知</li>
+          <li>ケア記録時 → 家族全員へお知らせ</li>
+        </ul>
+      </div>
+    </div>
+    <div class="phone">
+      <div class="phone-notch"></div>
+      <div class="phone-scr">
+        <div class="scr-head">✅ 元気チェック</div>
+        <div class="scr-body">
+          <div style="background:var(--teal-l);border-radius:7px;padding:3mm 2.5mm;text-align:center;margin-bottom:2mm;border:1.5px solid var(--teal);">
+            <div style="font-size:8pt;font-weight:900;color:var(--teal-d);">チョコ・モモ</div>
+            <div style="font-size:6.5pt;color:var(--s400);margin-top:1mm;">今日もチェックしよう</div>
+          </div>
+          <div style="background:linear-gradient(135deg,var(--teal),var(--teal-d));color:white;border-radius:7px;padding:3mm;text-align:center;font-size:8pt;font-weight:900;margin-bottom:1.5mm;">✅ 全員元気です！</div>
+          <div style="background:#FFF8EC;border:1px solid var(--amber);border-radius:7px;padding:2.5mm;text-align:center;font-size:7.5pt;font-weight:700;color:var(--orange);">⚠️ 心配な子がいる</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box gray" style="margin-top:2mm;">
+    <div class="box-title" style="color:var(--ink);">💡 ポイント：家族メンバーも元気チェックできます</div>
+    <p style="font-size:9pt;">v0.5.0 からオーナーだけでなく家族メンバーも直接チェックイン可能になりました。1家族1日1回ルールは維持。先にチェックした人の記録が採用されます。</p>
+  </div>
+
+  <div class="page-footer">
+    <span>🐾 PawBon 使い方ガイド v2.0</span>
+    <span>© 2026 PawBon Inc.</span>
+  </div>
+</div>
+
+<!-- ======================================
+     PAGE 5: 家族のケア（ケアボード）
+     ====================================== -->
+<div class="page">
+  <div class="page-header">
+    <span class="page-header-icon">🐾</span>
+    <span class="page-header-title">家族のケア（ケアボード）<span style="font-size:9pt; margin-left:2mm;" class="badge teal">v0.5.0 NEW</span></span>
+    <span class="page-num">4 / 6</span>
+  </div>
+
+  <div class="box teal">
+    <div class="box-title">🐾 ケアボードとは？</div>
+    <p style="font-size:10pt;">散歩・ごはん・お薬など、ペットのお世話を家族みんなで記録・共有する機能です。「誰が今日ケアしたか」が一目でわかります。</p>
+  </div>
+
+  <div class="sec">ケアボードの使い方</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">1</div>
+      <div>
+        <div class="step-t">「家族のケア」メニューをタップ</div>
+        <div class="step-d">LINEメニューから選ぶとケアボード（ケアボード/タイムライン2タブ）が開きます</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">2</div>
+      <div>
+        <div class="step-t">今日のケア状況を確認</div>
+        <div class="step-d">7種類のケアアイコングリッドに、記録済み（緑・数字付き）と未記録（グレー）が表示されます</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">3</div>
+      <div>
+        <div class="step-t">「記録する」ボタンでケアを記録</div>
+        <div class="step-d">画面下のボタン、またはグリッドアイコンをタップ→ペット・ケア種類・メモを入力して送信</div>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">4</div>
+      <div>
+        <div class="step-t">家族全員にLINE通知が届く</div>
+        <div class="step-d">記録者本人を除く家族メンバー全員に通知。例：「パパ がチョコの散歩を記録しました（7:30）」</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec">記録できるケアの種類（全7種類）</div>
+  <div style="display:flex;flex-wrap:wrap;gap:2mm;margin:2mm 0;">
+    <div style="flex:1;min-width:22mm;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:900;color:var(--teal-d);">お散歩</div>
+    </div>
+    <div style="flex:1;min-width:22mm;background:var(--teal-l);border:1.5px solid var(--teal);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:900;color:var(--teal-d);">ごはん</div>
+    </div>
+    <div style="flex:1;min-width:22mm;background:var(--s100);border:1px solid var(--s200);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:700;color:var(--s500);">お薬</div>
+    </div>
+    <div style="flex:1;min-width:22mm;background:var(--s100);border:1px solid var(--s200);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:700;color:var(--s500);">お風呂</div>
+    </div>
+    <div style="flex:1;min-width:22mm;background:var(--s100);border:1px solid var(--s200);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:700;color:var(--s500);">病院</div>
+    </div>
+    <div style="flex:1;min-width:22mm;background:var(--s100);border:1px solid var(--s200);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:700;color:var(--s500);">トリミング</div>
+    </div>
+    <div style="flex:1;min-width:22mm;background:var(--s100);border:1px solid var(--s200);border-radius:9px;padding:3mm;text-align:center;">
+      <div style="font-size:9pt;font-weight:700;color:var(--s500);">その他</div>
+    </div>
+  </div>
+  <p class="small">緑色 = 今日記録済み / グレー = 未記録</p>
+
+  <div class="sec" style="margin-top:2mm;">タイムライン機能</div>
+  <div class="box gray" style="margin-bottom:0;">
+    <p style="font-size:9pt; color:var(--s500); margin-bottom:2mm;">「タイムライン」タブに切り替えると、家族全員のケア記録・元気チェックが時系列で一覧表示されます（直近7日間）。</p>
+    <ul style="font-size:9pt; padding-left:4mm; color:var(--s500); line-height:2;">
+      <li>緑マーク：ケア記録（散歩・ごはん等）</li>
+      <li>緑マーク：元気チェック完了</li>
+      <li>黄マーク：心配な子がいる報告</li>
+      <li>各記録に「誰が・いつ・何をしたか」が表示</li>
+    </ul>
+  </div>
+
+  <div class="page-footer">
+    <span>🐾 PawBon 使い方ガイド v2.0</span>
+    <span>© 2026 PawBon Inc.</span>
+  </div>
+</div>
+
+<!-- ======================================
+     PAGE 6: レポート・家族管理・料金
+     ====================================== -->
+<div class="page">
+  <div class="page-header">
+    <span class="page-header-icon">📊</span>
+    <span class="page-header-title">元気レポート・家族管理</span>
+    <span class="page-num">5 / 6</span>
+  </div>
+
+  <div class="sec">元気レポートの見方</div>
+  <div class="two-col">
+    <div class="box gray" style="margin-bottom:0;">
+      <div class="box-title" style="color:var(--ink);">📊 統計情報</div>
+      <ul style="font-size:8.5pt; padding-left:3.5mm; line-height:2.1; color:var(--s500);">
+        <li><strong>トータル日数</strong>：チェック累計日数</li>
+        <li><strong>連続日数 🔥</strong>：連続チェック中の日数</li>
+        <li><strong>元気率</strong>：元気の割合</li>
+        <li><strong>地域統計</strong>：同地域の今日元気なペット数</li>
+      </ul>
+    </div>
+    <div class="box gray" style="margin-bottom:0;">
+      <div class="box-title" style="color:var(--ink);">📅 カレンダー表示</div>
+      <ul style="font-size:8.5pt; padding-left:3.5mm; line-height:2.1; color:var(--s500);">
+        <li>🟩 <strong>緑</strong>：元気チェック済み</li>
+        <li>🟨 <strong>黄</strong>：心配な報告あり</li>
+        <li>（空白）：チェックなし</li>
+        <li>月ごとに切り替え可能</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="sec" style="margin-top:4mm;">家族メンバーの管理</div>
+  <div class="two-col">
+    <div>
+      <p style="font-size:9pt; font-weight:700; margin-bottom:2mm; color:var(--ink);">家族を招待する</p>
+      <div class="steps">
+        <div class="step">
+          <div class="step-n rose">1</div>
+          <div><div class="step-d">「👪 家族」メニューをタップ</div></div>
+        </div>
+        <div class="step">
+          <div class="step-n rose">2</div>
+          <div><div class="step-d">「📤 LINEで家族を招待する」をタップ</div></div>
+        </div>
+        <div class="step">
+          <div class="step-n rose">3</div>
+          <div><div class="step-d">家族のLINEトークに招待カードを送る</div></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="box amber">
+        <div class="box-title">💎 メンバー枠の仕組み</div>
+        <ul style="font-size:8.5pt; padding-left:3.5mm; line-height:2.1; color:var(--s500);">
+          <li>基本：最大 <strong>2名</strong> 無料</li>
+          <li>友だち招待（紹介コード）で <strong>+1枠</strong></li>
+          <li>追加購入：<strong>¥100/月・1枠</strong></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec" style="margin-top:4mm;">🎁 紹介コードで枠を増やす</div>
+  <div class="box gray">
+    <p style="font-size:9pt; line-height:1.8; flex:1;">あなたの紹介コード（<span class="code">R-XXXXXX</span>）を友だちにシェア。友だちがペット登録時にコードを入力すると、あなたの家族メンバー枠が <strong>+1</strong>。「👪 家族」→「🎁 友だちを招待する」から確認・共有できます。</p>
+  </div>
+
+  <div class="sec" style="margin-top:4mm;">ペット別分析</div>
+  <div class="box teal">
+    <p style="font-size:9pt;">「📊 元気レポート」の画面下部で「ペット別」表示に切り替えると、ペットごとの元気率・心配回数・症状トップ3が確認できます。複数頭いる場合に特に便利です。</p>
+  </div>
+
+  <div class="page-footer">
+    <span>🐾 PawBon 使い方ガイド v2.0</span>
+    <span>© 2026 PawBon Inc.</span>
+  </div>
+</div>
+
+<!-- ======================================
+     PAGE 7: FAQ
+     ====================================== -->
+<div class="page">
+  <div class="page-header">
+    <span class="page-header-icon">❓</span>
+    <span class="page-header-title">よくある質問（FAQ）</span>
+    <span class="page-num">6 / 6</span>
+  </div>
+
+  <div class="faq">
+    <div class="faq-q">アプリのインストールは必要ですか？</div>
+    <div class="faq-a">必要ありません。LINEアプリがあればすべての機能を使えます。</div>
+  </div>
+  <div class="faq">
+    <div class="faq-q">複数のペットを登録できますか？</div>
+    <div class="faq-a">はい。1〜4匹以上に対応しています。ペット登録時に頭数を選び、各ペットの名前・種類を入力してください。後から「設定」メニューで編集も可能です。</div>
+  </div>
+  <div class="faq">
+    <div class="faq-q">家族コードを紛失してしまいました</div>
+    <div class="faq-a">「👪 家族」メニューをタップするといつでも確認できます。<span class="code">P-XXXX</span> 形式で画面上部に表示されます。</div>
+  </div>
+  <div class="faq">
+    <div class="faq-q">ケアボードに記録すると誰に通知が届きますか？</div>
+    <div class="faq-a">記録者本人を除く家族メンバー全員にLINE通知が届きます。例：「パパ がチョコの散歩を記録しました（7:30）」</div>
+  </div>
+  <div class="faq">
+    <div class="faq-q">元気チェックは家族メンバーでもできますか？</div>
+    <div class="faq-a">はい。v0.5.0 からメンバーも直接チェックイン可能です。1家族1日1回ルールは維持されており、誰が最初にチェックしても記録されます。</div>
+  </div>
+  <div class="faq">
+    <div class="faq-q">通知が届きません</div>
+    <div class="faq-a">「⚙️ 設定」メニューの通知設定を確認してください。またスマートフォンの設定 → LINE → 通知がオンになっているかも確認してください。</div>
+  </div>
+  <div class="faq">
+    <div class="faq-q">スマホを機種変更しても使えますか？</div>
+    <div class="faq-a">同じLINEアカウントでログインすれば引き続き使えます。データはサーバー上に保存されています。</div>
+  </div>
+
+  <div class="sec" style="margin-top:4mm;">お問い合わせ</div>
+  <div class="box teal">
+    <p style="font-size:9.5pt; line-height:2;">LINEの「⚙️ 設定」→「サポート」、またはPawBon担当者へご連絡ください。<br>
+    <strong>受付時間：</strong>平日 10:00〜18:00（JST）</p>
+  </div>
+
+  <div style="margin-top:5mm; text-align:center; padding:5mm; background:linear-gradient(135deg,#FFF0F2,#EDFCF7); border-radius:12px;">
+    <div style="font-size:22pt; margin-bottom:1.5mm;">🐾</div>
+    <div style="font-size:12pt; font-weight:900; color:var(--ink);">毎日のケアが、ペットとの絆を深めます</div>
+    <div style="font-size:9pt; color:var(--s500); margin-top:1.5mm;">PawBon をご利用いただきありがとうございます</div>
+  </div>
+
+  <div class="page-footer">
+    <span>🐾 PawBon 使い方ガイド v2.0</span>
+    <span>© 2026 PawBon Inc. — 内部配布資料</span>
+  </div>
+</div>
+
+</body>
+</html>
