@@ -23,6 +23,16 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
 .loading{text-align:center;padding:60px 20px;color:var(--s400);}
 
+/* スケルトン */
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+.sk{border-radius:10px;background:linear-gradient(90deg,var(--s100) 25%,var(--s200) 50%,var(--s100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+.sk-status{height:60px;border-radius:16px;margin-bottom:12px;}
+.sk-stat{height:58px;border-radius:14px;}
+.sk-grid-item{height:56px;border-radius:12px;}
+.sk-line{height:14px;margin-bottom:8px;}
+.sk-line.w60{width:60%;}
+.sk-line.w40{width:40%;}
+
 /* ケアボード */
 .checkin-status{padding:16px;border-radius:16px;margin-bottom:12px;text-align:center;font-weight:700;}
 .checkin-status.done{background:#DCFCE7;color:var(--teal-d);}
@@ -117,9 +127,21 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   <div class="tab" onclick="switchTab('timeline')">📅 タイムライン</div>
 </div>
 
-<div id="loading" class="loading">
-  <div style="font-size:40px;margin-bottom:12px;">🐾</div>
-  <div>読み込み中...</div>
+<!-- スケルトン（初回表示用） -->
+<div id="skeleton" class="section">
+  <div class="sk sk-status"></div>
+  <div class="stat-row">
+    <div class="sk sk-stat" style="flex:1;"></div>
+    <div class="sk sk-stat" style="flex:1;"></div>
+    <div class="sk sk-stat" style="flex:1;"></div>
+  </div>
+  <div class="sk sk-line w60"></div>
+  <div class="care-grid">
+    <div class="sk sk-grid-item"></div><div class="sk sk-grid-item"></div>
+    <div class="sk sk-grid-item"></div><div class="sk sk-grid-item"></div>
+    <div class="sk sk-grid-item"></div><div class="sk sk-grid-item"></div>
+    <div class="sk sk-grid-item"></div>
+  </div>
 </div>
 
 <!-- ===== ケアボード ===== -->
@@ -194,10 +216,11 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 
 <div class="footer">PawBon 元気チェック v0.5.0 Beta<br>&copy; 2026 PawBon Inc.</div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
 var API_BASE = PAWBON_CONFIG.API_BASE;
+var CACHE_KEY = 'pawbon_care_board';
+var CACHE_ID_KEY = 'pawbon_line_id';
 var lineId = '';
 var boardData = null;
 var timelineData = null;
@@ -214,37 +237,95 @@ var CARE_TYPES = [
   { id: 'other',    icon: '📝', label: 'その他' },
 ];
 
-// ═══ LIFF 初期化 ═══
-async function initLiff() {
+// ═══ 高速初期化（並行ロード + キャッシュ）═══
+(function() {
+  // 1) キャッシュから即時表示 / 从缓存即时显示
+  var cached = null;
+  try {
+    var raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      cached = JSON.parse(raw);
+      boardData = cached;
+      showBoard();
+      renderBoard();
+    }
+  } catch(e) {}
+
+  // 2) LIFF SDK を非同期ロード / 异步加载 LIFF SDK
+  var cachedLineId = '';
+  try { cachedLineId = localStorage.getItem(CACHE_ID_KEY) || ''; } catch(e) {}
+
+  var apiPromise = null;
+  // 3) キャッシュ lineId があれば API を先行呼出 / 有缓存lineId则先行调用API
+  if (cachedLineId) {
+    apiPromise = fetchBoard(cachedLineId);
+  }
+
+  // 4) LIFF SDK ロード + 初期化を並行 / 并行加载LIFF SDK
+  var script = document.createElement('script');
+  script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+  script.onload = function() { initLiff(cachedLineId, apiPromise); };
+  script.onerror = function() {
+    // LIFF SDK ロード失敗 → デバッグモード
+    lineId = cachedLineId || 'debug_user_' + Date.now();
+    if (!apiPromise) apiPromise = fetchBoard(lineId);
+    apiPromise.then(applyBoardData);
+  };
+  document.head.appendChild(script);
+})();
+
+async function initLiff(cachedLineId, earlyApiPromise) {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     var profile = await liff.getProfile();
     lineId = profile.userId;
+    // lineId をキャッシュ / 缓存lineId
+    try { localStorage.setItem(CACHE_ID_KEY, lineId); } catch(e) {}
   } catch (e) {
-    lineId = 'debug_user_' + Date.now();
+    lineId = cachedLineId || 'debug_user_' + Date.now();
   }
-  loadBoard();
-}
-initLiff();
 
-// ═══ ケアボード読み込み ═══
+  // lineId が同じなら先行 API を使う / lineId相同则复用先行API
+  if (earlyApiPromise && lineId === cachedLineId) {
+    earlyApiPromise.then(applyBoardData);
+  } else {
+    // lineId が変わった → 再取得 / lineId变了则重新获取
+    fetchBoard(lineId).then(applyBoardData);
+  }
+}
+
+function fetchBoard(id) {
+  return fetch(API_BASE + '/api-care-board?lineId=' + encodeURIComponent(id))
+    .then(function(r) { return r.json(); });
+}
+
+function applyBoardData(json) {
+  if (!json.success) {
+    document.getElementById('skeleton').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📝</div><div style="color:var(--s400);">未登録です。先にペット登録を行ってください。</div></div>';
+    return;
+  }
+  boardData = json.data;
+  // キャッシュ更新 / 更新缓存
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(boardData)); } catch(e) {}
+  showBoard();
+  renderBoard();
+}
+
+function showBoard() {
+  document.getElementById('skeleton').style.display = 'none';
+  document.getElementById('boardView').style.display = 'block';
+}
+
+// ═══ ケアボード読み込み（記録後のリロード用）═══
 async function loadBoard() {
   try {
-    var res = await fetch(API_BASE + '/api-care-board?lineId=' + encodeURIComponent(lineId));
-    var json = await res.json();
-    if (!json.success) {
-      document.getElementById('loading').innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
-      return;
-    }
-    boardData = json.data;
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('boardView').style.display = 'block';
-    renderBoard();
+    var json = await fetchBoard(lineId);
+    applyBoardData(json);
   } catch (e) {
-    document.getElementById('loading').innerHTML =
-      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+    document.getElementById('skeleton').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">❌</div><div style="color:var(--s400);">エラー: ' + e.message + '</div></div>';
   }
 }
 
@@ -332,18 +413,32 @@ function renderBoard() {
 }
 
 // ═══ タイムライン ═══
+var TL_CACHE_KEY = 'pawbon_care_timeline';
+
 async function loadTimeline() {
-  if (timelineData) { renderTimeline(); return; }
+  // キャッシュから即時表示 / 从缓存即时显示
+  if (!timelineData) {
+    try {
+      var raw = localStorage.getItem(TL_CACHE_KEY);
+      if (raw) { timelineData = JSON.parse(raw); renderTimeline(); }
+    } catch(e) {}
+  } else {
+    renderTimeline();
+  }
+  // バックグラウンド更新 / 后台更新
   try {
     var res = await fetch(API_BASE + '/api-care-log?lineId=' + encodeURIComponent(lineId) + '&days=7');
     var json = await res.json();
     if (json.success) {
       timelineData = json.data.logs || [];
+      try { localStorage.setItem(TL_CACHE_KEY, JSON.stringify(timelineData)); } catch(e) {}
       renderTimeline();
     }
   } catch (e) {
-    document.getElementById('timelineList').innerHTML =
-      '<div style="padding:16px;text-align:center;color:var(--s400);">読み込みエラー</div>';
+    if (!timelineData) {
+      document.getElementById('timelineList').innerHTML =
+        '<div style="padding:16px;text-align:center;color:var(--s400);">読み込みエラー</div>';
+    }
   }
 }
 
@@ -484,13 +579,12 @@ async function submitCare() {
       // FAB pulse停止（記録成功後）
       var fab = document.getElementById('fabBtn');
       if (fab) fab.classList.remove('pulse');
-      // データ更新
+      // データ更新 + キャッシュクリア
       boardData = null;
       timelineData = null;
+      try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(TL_CACHE_KEY); } catch(e) {}
       setTimeout(function() {
         closeModal();
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('boardView').style.display = 'none';
         loadBoard();
       }, 800);
     } else {

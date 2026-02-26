@@ -45,15 +45,27 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .pet-entry .form-input,.pet-entry .form-select{margin-bottom:8px;}
 .relation-locked{display:inline-block;padding:8px 14px;border-radius:12px;font-size:13px;font-weight:700;background:var(--s100);color:var(--s500);margin-bottom:16px;}
 .hint-text{font-size:10px;color:var(--s400);margin-top:-4px;margin-bottom:8px;}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+.sk{border-radius:10px;background:linear-gradient(90deg,var(--s100) 25%,var(--s200) 50%,var(--s100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+.sk-item{height:68px;border-radius:16px;margin-bottom:8px;}
+.sk-line{height:12px;margin-bottom:6px;}
 </style>
 </head>
 <body>
 
 <div class="header"><h1>⚙️ 設定</h1></div>
 
-<div id="loading" class="loading">
-  <div style="font-size:40px;margin-bottom:12px;">⚙️</div>
-  <div>読み込み中...</div>
+<div id="loading" class="section">
+  <div class="sk sk-line" style="width:80px;margin-bottom:12px;"></div>
+  <div style="background:var(--card);border-radius:16px;padding:0 16px;">
+    <div class="sk sk-item"></div>
+  </div>
+  <div class="sk sk-line" style="width:100px;margin-top:16px;margin-bottom:12px;"></div>
+  <div style="background:var(--card);border-radius:16px;padding:0 16px;">
+    <div class="sk sk-item"></div>
+    <div class="sk sk-item"></div>
+    <div class="sk sk-item"></div>
+  </div>
 </div>
 
 <div id="content" style="display:none;">
@@ -165,10 +177,10 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
 var API_BASE = PAWBON_CONFIG.API_BASE;
+var CACHE_ID_KEY = 'pawbon_line_id';
 var lineId = '';
 var userData = null;
 var editPetCount = 1;
@@ -180,41 +192,65 @@ var breedOptions = {
   other: ['うさぎ','ハムスター','フェレット','鳥','その他']
 };
 
-// ═══ LIFF ═══
-async function initLiff() {
+// ═══ 高速初期化 ═══
+(function() {
+  var cachedLineId = '';
+  try { cachedLineId = localStorage.getItem(CACHE_ID_KEY) || ''; } catch(e) {}
+
+  var apiPromise = null;
+  if (cachedLineId) {
+    apiPromise = fetchSettings(cachedLineId);
+  }
+
+  var script = document.createElement('script');
+  script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+  script.onload = function() { initLiff(cachedLineId, apiPromise); };
+  script.onerror = function() {
+    lineId = cachedLineId || 'debug_user_' + Date.now();
+    if (!apiPromise) apiPromise = fetchSettings(lineId);
+    apiPromise.then(applySettingsData);
+  };
+  document.head.appendChild(script);
+})();
+
+async function initLiff(cachedLineId, earlyApiPromise) {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.settings });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     var profile = await liff.getProfile();
     lineId = profile.userId;
+    try { localStorage.setItem(CACHE_ID_KEY, lineId); } catch(e) {}
   } catch (e) {
-    lineId = 'debug_user_' + Date.now();
+    lineId = cachedLineId || 'debug_user_' + Date.now();
   }
-  loadSettings();
+
+  if (earlyApiPromise && lineId === cachedLineId) {
+    earlyApiPromise.then(applySettingsData);
+  } else {
+    fetchSettings(lineId).then(applySettingsData);
+  }
 }
-initLiff();
 
-// ═══ Load（Edge Function 経由） ═══
-async function loadSettings() {
+function fetchSettings(id) {
+  return fetch(API_BASE + '/api-user-data?lineId=' + encodeURIComponent(id))
+    .then(function(r) { return r.json(); });
+}
+
+function applySettingsData(json) {
   try {
-    var res = await fetch(API_BASE + '/api-user-data?lineId=' + encodeURIComponent(lineId));
-    var json = await res.json();
     var data = json.data || {};
-
     if (!data.registered && !data.familyCode) {
       document.getElementById('loading').innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
+        '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div></div>';
       return;
     }
 
-    // familyMembers 配列から自分のメンバー情報を抽出
     var allMembers = data.familyMembers || [];
     var myMember = null;
     allMembers.forEach(function(m) {
       if (m.member_line_id === lineId) myMember = m;
     });
 
-    // openchats テーブルは存在しない → fallback null
     userData = {
       role: data.role,
       familyCode: data.familyCode,
@@ -230,7 +266,18 @@ async function loadSettings() {
     renderSettings();
   } catch (e) {
     document.getElementById('loading').innerHTML =
-      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div></div>';
+  }
+}
+
+// Note: loadSettings() is still needed for re-fetching after save operations
+async function loadSettings() {
+  try {
+    var json = await fetchSettings(lineId);
+    applySettingsData(json);
+  } catch (e) {
+    document.getElementById('loading').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div></div>';
   }
 }
 
