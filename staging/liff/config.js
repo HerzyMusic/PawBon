@@ -118,3 +118,96 @@ if (ENV !== 'PRODUCTION') {
     document.body.appendChild(badge);
   });
 }
+
+// ─────────────────────────────
+// PawBon カスタムモーダル / 品牌弹窗
+// window.alert() をオーバーライドし、ドメイン名を非表示に
+// ─────────────────────────────
+(function () {
+  var _nativeAlert = window.alert;
+
+  // モーダル DOM を遅延生成（1回のみ）/ 延迟创建 DOM（仅一次）
+  var overlay, dialog;
+  function ensureDOM() {
+    if (overlay) return;
+
+    overlay = document.createElement('div');
+    overlay.id = 'pawbon-modal-overlay';
+    overlay.style.cssText =
+      'display:none;position:fixed;inset:0;z-index:100000;' +
+      'background:rgba(0,0,0,.45);justify-content:center;align-items:center;';
+
+    dialog = document.createElement('div');
+    dialog.style.cssText =
+      'background:#fff;border-radius:14px;width:270px;max-width:85vw;' +
+      'text-align:center;overflow:hidden;font-family:-apple-system,system-ui,sans-serif;' +
+      'box-shadow:0 8px 32px rgba(0,0,0,.18);';
+
+    // ヘッダー（ロゴ + タイトル）/ 头部（Logo + 标题）
+    var header = document.createElement('div');
+    header.style.cssText = 'padding:20px 16px 4px;';
+    header.innerHTML =
+      '<div style="font-size:22px;margin-bottom:4px;">\u{1F43E}</div>' +
+      '<div style="font-size:17px;font-weight:600;color:#1a1a1a;">PawBon</div>';
+
+    // メッセージ本文 / 消息正文
+    var body = document.createElement('div');
+    body.id = 'pawbon-modal-body';
+    body.style.cssText =
+      'padding:8px 16px 20px;font-size:13px;line-height:1.5;color:#444;' +
+      'white-space:pre-wrap;word-break:break-word;';
+
+    // 区切り線 + OK ボタン / 分割线 + OK 按钮
+    var btnWrap = document.createElement('div');
+    btnWrap.style.cssText = 'border-top:1px solid #e5e5e5;';
+    var btn = document.createElement('button');
+    btn.id = 'pawbon-modal-btn';
+    btn.textContent = 'OK';
+    btn.style.cssText =
+      'width:100%;padding:12px;border:none;background:none;' +
+      'font-size:17px;font-weight:600;color:#007aff;cursor:pointer;' +
+      '-webkit-tap-highlight-color:transparent;';
+    btnWrap.appendChild(btn);
+
+    dialog.appendChild(header);
+    dialog.appendChild(body);
+    dialog.appendChild(btnWrap);
+    overlay.appendChild(dialog);
+  }
+
+  // resolve 関数を保持 / 保持 resolve 函数
+  var _resolve = null;
+
+  function showModal(msg) {
+    ensureDOM();
+    // body にまだ追加されていなければ追加 / 如果还未添加到 body 则追加
+    if (!overlay.parentNode) document.body.appendChild(overlay);
+
+    document.getElementById('pawbon-modal-body').textContent = msg;
+    overlay.style.display = 'flex';
+
+    return new Promise(function (resolve) {
+      _resolve = resolve;
+      var btn = document.getElementById('pawbon-modal-btn');
+      // リスナーを差し替え / 替换监听器
+      var newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.addEventListener('click', closeModal);
+    });
+  }
+
+  function closeModal() {
+    overlay.style.display = 'none';
+    if (_resolve) { _resolve(); _resolve = null; }
+  }
+
+  // window.alert をオーバーライド / 覆盖 window.alert
+  window.alert = function (msg) {
+    if (!document.body) {
+      // DOM 未構築時はネイティブにフォールバック
+      _nativeAlert(msg);
+      return;
+    }
+    showModal(String(msg || ''));
+  };
+})();

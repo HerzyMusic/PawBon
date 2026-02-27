@@ -64,14 +64,20 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .reminder-card .sent-badge{display:inline-block;margin-top:14px;padding:6px 18px;border-radius:20px;background:var(--amber);color:#fff;font-size:12px;font-weight:700;}
 @keyframes pulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
 .pulse{animation:pulse 2s infinite;}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+.sk{border-radius:10px;background:linear-gradient(90deg,var(--s100) 25%,var(--s200) 50%,var(--s100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+.sk-line{height:14px;margin-bottom:10px;}
+.sk-pet{height:56px;border-radius:14px;margin-bottom:8px;}
 </style>
 </head>
 <body>
 
 <!-- ═══ ローディング ═══ -->
-<div id="initLoading" style="text-align:center;padding:60px 20px;">
-  <div style="font-size:40px;margin-bottom:12px;">🐾</div>
-  <div style="color:var(--s400);">読み込み中...</div>
+<div id="initLoading" style="padding:20px;">
+  <div style="text-align:center;padding:20px 0 16px;"><div class="sk" style="width:200px;height:20px;margin:0 auto;border-radius:10px;"></div></div>
+  <div class="sk sk-pet"></div>
+  <div class="sk sk-pet"></div>
+  <div class="sk sk-line" style="width:60%;margin-top:16px;"></div>
 </div>
 
 <!-- ═══ オーナー: チェック画面 ═══ -->
@@ -155,10 +161,10 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 
 <div class="footer">PawBon 元気チェック v0.4.5 Beta<br>© 2026 PawBon Inc.</div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
 var API_BASE = PAWBON_CONFIG.API_BASE;
+var CACHE_ID_KEY = 'pawbon_line_id';
 var lineId = '';
 var familyCode = '';
 var family = null;
@@ -169,30 +175,56 @@ var worriedPets = {};
 
 function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-// ═══ LIFF ═══
-async function initLiff() {
+// ═══ 高速初期化 / Fast init: cached lineId + parallel API + async SDK ═══
+(function() {
+  var cachedLineId = '';
+  try { cachedLineId = localStorage.getItem(CACHE_ID_KEY) || ''; } catch(e) {}
+
+  var apiPromise = null;
+  if (cachedLineId) {
+    apiPromise = fetchUserData(cachedLineId);
+  }
+
+  var script = document.createElement('script');
+  script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+  script.onload = function() { initLiff(cachedLineId, apiPromise); };
+  script.onerror = function() {
+    lineId = cachedLineId || 'debug_user_' + Date.now();
+    if (!apiPromise) apiPromise = fetchUserData(lineId);
+    apiPromise.then(applyUserData);
+  };
+  document.head.appendChild(script);
+})();
+
+async function initLiff(cachedLineId, earlyApiPromise) {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.worry });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     var profile = await liff.getProfile();
     lineId = profile.userId;
+    try { localStorage.setItem(CACHE_ID_KEY, lineId); } catch(e) {}
   } catch (e) {
-    lineId = 'debug_user_' + Date.now();
+    lineId = cachedLineId || 'debug_user_' + Date.now();
   }
-  if (lineId) loadUserData();
+
+  if (earlyApiPromise && lineId === cachedLineId) {
+    earlyApiPromise.then(applyUserData);
+  } else {
+    fetchUserData(lineId).then(applyUserData);
+  }
 }
-initLiff();
 
-// ═══ Load（Edge Function 経由） ═══
-async function loadUserData() {
+function fetchUserData(id) {
+  return fetch(API_BASE + '/api-user-data?lineId=' + encodeURIComponent(id))
+    .then(function(r) { return r.json(); });
+}
+
+function applyUserData(json) {
   try {
-    var res = await fetch(API_BASE + '/api-user-data?lineId=' + encodeURIComponent(lineId));
-    var json = await res.json();
     var data = json.data || {};
-
     if (!data.registered && !data.familyCode) {
       document.getElementById('initLoading').innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録をしてください。</div>';
+        '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録をしてください。</div></div>';
       return;
     }
 
@@ -217,13 +249,13 @@ async function loadUserData() {
     };
 
     if (role === 'owner') {
-      await handleOwnerFlow(data.checkedInToday);
+      handleOwnerFlow(data.checkedInToday);
     } else {
-      await handleMemberFlow(data.checkedInToday);
+      handleMemberFlow(data.checkedInToday);
     }
   } catch (e) {
     document.getElementById('initLoading').innerHTML =
-      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div></div>';
   }
 }
 

@@ -23,6 +23,16 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .section-title{font-size:13px;font-weight:800;color:var(--s500);margin-bottom:10px;}
 .loading{text-align:center;padding:60px 20px;color:var(--s400);}
 
+/* スケルトン */
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+.sk{border-radius:10px;background:linear-gradient(90deg,var(--s100) 25%,var(--s200) 50%,var(--s100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+.sk-status{height:60px;border-radius:16px;margin-bottom:12px;}
+.sk-stat{height:58px;border-radius:14px;}
+.sk-grid-item{height:56px;border-radius:12px;}
+.sk-line{height:14px;margin-bottom:8px;}
+.sk-line.w60{width:60%;}
+.sk-line.w40{width:40%;}
+
 /* ケアボード */
 .checkin-status{padding:16px;border-radius:16px;margin-bottom:12px;text-align:center;font-weight:700;}
 .checkin-status.done{background:#DCFCE7;color:var(--teal-d);}
@@ -38,12 +48,25 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .stat-box .sv.amber{color:var(--amber);}
 .stat-box .sl{font-size:9px;color:var(--s400);margin-top:2px;}
 
-/* ケアグリッド */
+/* ケアグリッド — クイックアクション化 */
 .care-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
-.care-item{background:var(--s100);border-radius:12px;padding:10px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--s500);}
+.care-item{background:var(--s100);border-radius:12px;padding:10px 4px;text-align:center;font-size:11px;font-weight:600;color:var(--s500);cursor:pointer;transition:background .15s,transform .1s;position:relative;-webkit-user-select:none;user-select:none;}
+.care-item:active{transform:scale(.93);background:var(--teal-l);}
 .care-item .icon{font-size:22px;margin-bottom:4px;}
 .care-item .count{font-size:16px;font-weight:900;color:var(--teal-d);}
+.care-item.has-log{background:var(--teal-l);}
 .care-item.has-log .count{color:var(--teal-d);}
+.care-item .badge{position:absolute;top:4px;right:4px;min-width:18px;height:18px;border-radius:9px;background:var(--teal);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;padding:0 4px;}
+
+/* CTAカード — 0件時表示 */
+.cta-card{background:linear-gradient(135deg,var(--teal),var(--teal-d));border-radius:16px;padding:20px;margin-bottom:16px;text-align:center;color:#fff;}
+.cta-card .cta-title{font-size:16px;font-weight:800;margin-bottom:4px;}
+.cta-card .cta-sub{font-size:12px;opacity:.85;margin-bottom:14px;}
+.cta-card .cta-btn{display:inline-block;width:100%;padding:12px;border:none;border-radius:12px;background:rgba(255,255,255,.95);color:var(--teal-d);font-size:14px;font-weight:800;cursor:pointer;transition:background .15s;}
+.cta-card .cta-btn:active{background:rgba(255,255,255,.75);}
+
+/* 0件エンプティステート */
+.empty-care-msg{text-align:center;padding:16px;color:var(--s400);font-size:13px;line-height:1.6;}
 
 /* タイムライン */
 .tl-item{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--s100);}
@@ -57,9 +80,11 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .tl-meta{font-size:11px;color:var(--s400);margin-top:2px;}
 .tl-memo{font-size:11px;color:var(--s500);margin-top:4px;padding:6px 8px;background:var(--s100);border-radius:8px;}
 
-/* FAB */
-.fab{position:fixed;bottom:20px;right:20px;width:56px;height:56px;border-radius:50%;background:var(--teal);color:#fff;border:none;font-size:28px;box-shadow:0 4px 12px rgba(46,205,167,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:100;}
-.fab:active{transform:scale(.92);}
+/* FAB — ピル型テキスト付き、中央下配置 */
+.fab{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);height:52px;width:auto;padding:0 28px;border-radius:26px;background:var(--teal);color:#fff;border:none;font-size:15px;font-weight:800;box-shadow:0 4px 16px rgba(46,205,167,.45);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;z-index:100;white-space:nowrap;}
+.fab:active{transform:translateX(-50%) scale(.94);}
+.fab.pulse{animation:fabPulse 2s ease-in-out 3;}
+@keyframes fabPulse{0%,100%{box-shadow:0 4px 16px rgba(46,205,167,.45);}50%{box-shadow:0 4px 24px rgba(46,205,167,.7),0 0 0 8px rgba(46,205,167,.15);}}
 
 /* モーダル */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;align-items:flex-end;justify-content:center;}
@@ -102,9 +127,21 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   <div class="tab" onclick="switchTab('timeline')">📅 タイムライン</div>
 </div>
 
-<div id="loading" class="loading">
-  <div style="font-size:40px;margin-bottom:12px;">🐾</div>
-  <div>読み込み中...</div>
+<!-- スケルトン（初回表示用） -->
+<div id="skeleton" class="section">
+  <div class="sk sk-status"></div>
+  <div class="stat-row">
+    <div class="sk sk-stat" style="flex:1;"></div>
+    <div class="sk sk-stat" style="flex:1;"></div>
+    <div class="sk sk-stat" style="flex:1;"></div>
+  </div>
+  <div class="sk sk-line w60"></div>
+  <div class="care-grid">
+    <div class="sk sk-grid-item"></div><div class="sk sk-grid-item"></div>
+    <div class="sk sk-grid-item"></div><div class="sk sk-grid-item"></div>
+    <div class="sk sk-grid-item"></div><div class="sk sk-grid-item"></div>
+    <div class="sk sk-grid-item"></div>
+  </div>
 </div>
 
 <!-- ===== ケアボード ===== -->
@@ -129,9 +166,17 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
       <div id="memberList" class="member-list"></div>
     </div>
 
+    <!-- CTAカード（0件時のみ表示） -->
+    <div id="ctaCard" class="cta-card" style="display:none;">
+      <div class="cta-title">📝 ケアを記録しよう</div>
+      <div class="cta-sub">タップしてお世話を記録</div>
+      <button class="cta-btn" onclick="openModal()">📝 記録する</button>
+    </div>
+
     <!-- 今日のケア -->
     <div class="section-title">📋 今日のケア</div>
     <div id="careGrid" class="care-grid"></div>
+    <div id="emptyCareMsg" class="empty-care-msg" style="display:none;"></div>
 
     <!-- 今日のケア詳細 -->
     <div id="todayCareList" class="card" style="padding:0 16px;display:none;"></div>
@@ -146,8 +191,8 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   </div>
 </div>
 
-<!-- FAB -->
-<button class="fab" onclick="openModal()" title="ケア記録">+</button>
+<!-- FAB — ピル型テキスト付き -->
+<button class="fab pulse" id="fabBtn" onclick="openModal()">📝 記録する</button>
 
 <!-- 記録モーダル -->
 <div class="modal-overlay" id="modal">
@@ -171,10 +216,11 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 
 <div class="footer">PawBon 元気チェック v0.5.0 Beta<br>&copy; 2026 PawBon Inc.</div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
 var API_BASE = PAWBON_CONFIG.API_BASE;
+var CACHE_KEY = 'pawbon_care_board';
+var CACHE_ID_KEY = 'pawbon_line_id';
 var lineId = '';
 var boardData = null;
 var timelineData = null;
@@ -191,37 +237,95 @@ var CARE_TYPES = [
   { id: 'other',    icon: '📝', label: 'その他' },
 ];
 
-// ═══ LIFF 初期化 ═══
-async function initLiff() {
+// ═══ 高速初期化（並行ロード + キャッシュ）═══
+(function() {
+  // 1) キャッシュから即時表示 / 从缓存即时显示
+  var cached = null;
+  try {
+    var raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      cached = JSON.parse(raw);
+      boardData = cached;
+      showBoard();
+      renderBoard();
+    }
+  } catch(e) {}
+
+  // 2) LIFF SDK を非同期ロード / 异步加载 LIFF SDK
+  var cachedLineId = '';
+  try { cachedLineId = localStorage.getItem(CACHE_ID_KEY) || ''; } catch(e) {}
+
+  var apiPromise = null;
+  // 3) キャッシュ lineId があれば API を先行呼出 / 有缓存lineId则先行调用API
+  if (cachedLineId) {
+    apiPromise = fetchBoard(cachedLineId);
+  }
+
+  // 4) LIFF SDK ロード + 初期化を並行 / 并行加载LIFF SDK
+  var script = document.createElement('script');
+  script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+  script.onload = function() { initLiff(cachedLineId, apiPromise); };
+  script.onerror = function() {
+    // LIFF SDK ロード失敗 → デバッグモード
+    lineId = cachedLineId || 'debug_user_' + Date.now();
+    if (!apiPromise) apiPromise = fetchBoard(lineId);
+    apiPromise.then(applyBoardData);
+  };
+  document.head.appendChild(script);
+})();
+
+async function initLiff(cachedLineId, earlyApiPromise) {
   try {
     await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
     if (!liff.isLoggedIn()) { liff.login(); return; }
     var profile = await liff.getProfile();
     lineId = profile.userId;
+    // lineId をキャッシュ / 缓存lineId
+    try { localStorage.setItem(CACHE_ID_KEY, lineId); } catch(e) {}
   } catch (e) {
-    lineId = 'debug_user_' + Date.now();
+    lineId = cachedLineId || 'debug_user_' + Date.now();
   }
-  loadBoard();
-}
-initLiff();
 
-// ═══ ケアボード読み込み ═══
+  // lineId が同じなら先行 API を使う / lineId相同则复用先行API
+  if (earlyApiPromise && lineId === cachedLineId) {
+    earlyApiPromise.then(applyBoardData);
+  } else {
+    // lineId が変わった → 再取得 / lineId变了则重新获取
+    fetchBoard(lineId).then(applyBoardData);
+  }
+}
+
+function fetchBoard(id) {
+  return fetch(API_BASE + '/api-care-board?lineId=' + encodeURIComponent(id))
+    .then(function(r) { return r.json(); });
+}
+
+function applyBoardData(json) {
+  if (!json.success) {
+    document.getElementById('skeleton').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📝</div><div style="color:var(--s400);">未登録です。先にペット登録を行ってください。</div></div>';
+    return;
+  }
+  boardData = json.data;
+  // キャッシュ更新 / 更新缓存
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(boardData)); } catch(e) {}
+  showBoard();
+  renderBoard();
+}
+
+function showBoard() {
+  document.getElementById('skeleton').style.display = 'none';
+  document.getElementById('boardView').style.display = 'block';
+}
+
+// ═══ ケアボード読み込み（記録後のリロード用）═══
 async function loadBoard() {
   try {
-    var res = await fetch(API_BASE + '/api-care-board?lineId=' + encodeURIComponent(lineId));
-    var json = await res.json();
-    if (!json.success) {
-      document.getElementById('loading').innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
-      return;
-    }
-    boardData = json.data;
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('boardView').style.display = 'block';
-    renderBoard();
+    var json = await fetchBoard(lineId);
+    applyBoardData(json);
   } catch (e) {
-    document.getElementById('loading').innerHTML =
-      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+    document.getElementById('skeleton').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">❌</div><div style="color:var(--s400);">エラー: ' + e.message + '</div></div>';
   }
 }
 
@@ -257,19 +361,35 @@ function renderBoard() {
     }).join('');
   }
 
-  // 今日のケアグリッド
+  // 今日のケアグリッド — 全7種 + クイックアクション
   var todayLogs = d.todayCareLogs || [];
   var careCounts = {};
   todayLogs.forEach(function(log) {
     careCounts[log.care_type] = (careCounts[log.care_type] || 0) + 1;
   });
 
-  document.getElementById('careGrid').innerHTML = CARE_TYPES.slice(0, 4).map(function(ct) {
+  document.getElementById('careGrid').innerHTML = CARE_TYPES.map(function(ct) {
     var count = careCounts[ct.id] || 0;
     var cls = count > 0 ? 'care-item has-log' : 'care-item';
-    return '<div class="' + cls + '"><div class="icon">' + ct.icon + '</div>' +
-      '<div class="count">' + count + '</div>' + ct.label + '</div>';
+    var badge = count > 0 ? '<span class="badge">' + count + '</span>' : '';
+    return '<div class="' + cls + '" onclick="quickCare(\'' + ct.id + '\')">' + badge +
+      '<div class="icon">' + ct.icon + '</div>' + ct.label + '</div>';
   }).join('');
+
+  // CTAカード — 今日0件時のみ表示
+  document.getElementById('ctaCard').style.display = todayLogs.length === 0 ? 'block' : 'none';
+
+  // 0件エンプティステート
+  var emptyEl = document.getElementById('emptyCareMsg');
+  if (todayLogs.length === 0) {
+    emptyEl.style.display = 'block';
+    emptyEl.innerHTML = '🐾 まだ今日のケアがありません<br>上のアイコンをタップして記録しよう';
+  } else {
+    emptyEl.style.display = 'none';
+    // 記録があればFABのpulse停止
+    var fab = document.getElementById('fabBtn');
+    if (fab) fab.classList.remove('pulse');
+  }
 
   // 今日のケア詳細
   if (todayLogs.length > 0) {
@@ -281,10 +401,11 @@ function renderBoard() {
       var label = ct ? ct.label : log.care_type;
       var time = new Date(log.care_time);
       var timeStr = time.getHours() + ':' + String(time.getMinutes()).padStart(2, '0');
+      var byName = log.recorded_by_name ? '（' + escapeHtml(log.recorded_by_name) + '）' : '';
       return '<div class="tl-item">' +
         '<div class="tl-icon care">' + icon + '</div>' +
         '<div class="tl-body"><div class="tl-title">' + escapeHtml(log.pet_name) + ' — ' + label + '</div>' +
-        '<div class="tl-meta">' + timeStr + '</div>' +
+        '<div class="tl-meta">' + timeStr + ' 👤 ' + byName + '</div>' +
         (log.memo ? '<div class="tl-memo">' + escapeHtml(log.memo) + '</div>' : '') +
         '</div></div>';
     }).join('');
@@ -292,18 +413,32 @@ function renderBoard() {
 }
 
 // ═══ タイムライン ═══
+var TL_CACHE_KEY = 'pawbon_care_timeline';
+
 async function loadTimeline() {
-  if (timelineData) { renderTimeline(); return; }
+  // キャッシュから即時表示 / 从缓存即时显示
+  if (!timelineData) {
+    try {
+      var raw = localStorage.getItem(TL_CACHE_KEY);
+      if (raw) { timelineData = JSON.parse(raw); renderTimeline(); }
+    } catch(e) {}
+  } else {
+    renderTimeline();
+  }
+  // バックグラウンド更新 / 后台更新
   try {
     var res = await fetch(API_BASE + '/api-care-log?lineId=' + encodeURIComponent(lineId) + '&days=7');
     var json = await res.json();
     if (json.success) {
       timelineData = json.data.logs || [];
+      try { localStorage.setItem(TL_CACHE_KEY, JSON.stringify(timelineData)); } catch(e) {}
       renderTimeline();
     }
   } catch (e) {
-    document.getElementById('timelineList').innerHTML =
-      '<div style="padding:16px;text-align:center;color:var(--s400);">読み込みエラー</div>';
+    if (!timelineData) {
+      document.getElementById('timelineList').innerHTML =
+        '<div style="padding:16px;text-align:center;color:var(--s400);">読み込みエラー</div>';
+    }
   }
 }
 
@@ -325,9 +460,10 @@ function renderTimeline() {
       var ct = CARE_TYPES.find(function(c) { return c.id === item.careType; });
       var icon = ct ? ct.icon : '📋';
       var label = ct ? ct.label : item.careType;
+      var careBy = item.recordedByName ? '（' + escapeHtml(item.recordedByName) + '）' : '';
       return '<div class="tl-item">' +
         '<div class="tl-icon care">' + icon + '</div>' +
-        '<div class="tl-body"><div class="tl-title">' + escapeHtml(item.petName) + ' — ' + label + '</div>' +
+        '<div class="tl-body"><div class="tl-title">' + escapeHtml(item.petName) + ' — ' + label + careBy + '</div>' +
         '<div class="tl-meta">' + dateStr + ' ' + timeStr + '</div>' +
         (item.memo ? '<div class="tl-memo">' + escapeHtml(item.memo) + '</div>' : '') +
         '</div></div>';
@@ -359,7 +495,7 @@ function switchTab(name) {
 }
 
 // ═══ モーダル ═══
-function openModal() {
+function openModal(presetCareType) {
   if (!boardData) return;
   selectedPet = '';
   selectedCare = '';
@@ -367,19 +503,34 @@ function openModal() {
   document.getElementById('submitMsg').textContent = '';
   document.getElementById('btnSubmit').disabled = true;
 
-  // ペット選択
+  // ペット選択 — 1匹の場合は自動選択
   var petNames = boardData.petNames || [];
   document.getElementById('modalPets').innerHTML = petNames.map(function(name) {
     return '<div class="pet-chip" onclick="selectPet(this,\'' + escapeAttr(name) + '\')">' + escapeHtml(name) + '</div>';
   }).join('');
+  if (petNames.length === 1) {
+    selectedPet = petNames[0];
+    var petChip = document.querySelector('.pet-chip');
+    if (petChip) petChip.classList.add('selected');
+  }
 
-  // ケアタイプ選択
+  // ケアタイプ選択 — presetがあれば事前選択
   document.getElementById('modalCareTypes').innerHTML = CARE_TYPES.map(function(ct) {
-    return '<div class="care-chip" onclick="selectCare(this,\'' + ct.id + '\')">' +
+    var sel = (presetCareType && ct.id === presetCareType) ? ' selected' : '';
+    return '<div class="care-chip' + sel + '" onclick="selectCare(this,\'' + ct.id + '\')">' +
       '<span class="icon">' + ct.icon + '</span>' + ct.label + '</div>';
   }).join('');
+  if (presetCareType) {
+    selectedCare = presetCareType;
+  }
 
+  updateSubmitState();
   document.getElementById('modal').classList.add('open');
+}
+
+// クイックケア — グリッドからのショートカット
+function quickCare(careType) {
+  openModal(careType);
 }
 
 function closeModal() {
@@ -425,13 +576,15 @@ async function submitCare() {
     if (json.success) {
       msg.style.color = 'var(--teal-d)';
       msg.textContent = '✅ 記録しました！';
-      // データ更新
+      // FAB pulse停止（記録成功後）
+      var fab = document.getElementById('fabBtn');
+      if (fab) fab.classList.remove('pulse');
+      // データ更新 + キャッシュクリア
       boardData = null;
       timelineData = null;
+      try { localStorage.removeItem(CACHE_KEY); localStorage.removeItem(TL_CACHE_KEY); } catch(e) {}
       setTimeout(function() {
         closeModal();
-        document.getElementById('loading').style.display = 'block';
-        document.getElementById('boardView').style.display = 'none';
         loadBoard();
       }, 800);
     } else {

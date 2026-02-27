@@ -59,6 +59,13 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 .pet-card-allclear{font-size:14px;color:var(--teal-d);font-weight:700;text-align:center;padding:8px 0;}
 .symptom-tag{display:inline-block;padding:2px 8px;border-radius:10px;background:var(--amber-l);color:#92400E;font-size:11px;margin:0 2px;}
 .family-summary-card{font-size:14px;line-height:1.8;font-weight:700;}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+.sk{border-radius:10px;background:linear-gradient(90deg,var(--s100) 25%,var(--s200) 50%,var(--s100) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+.sk-stat{height:58px;border-radius:14px;}
+.sk-line{height:14px;margin-bottom:8px;}
+.sk-line.w60{width:60%;}
+.sk-line.w40{width:40%;}
+.sk-card{height:200px;border-radius:16px;margin-bottom:12px;}
 </style>
 </head>
 <body>
@@ -68,9 +75,17 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
   <p id="headerSub">読み込み中...</p>
 </div>
 
-<div id="loading" class="loading">
-  <div style="font-size:40px;margin-bottom:12px;">📊</div>
-  <div>読み込み中...</div>
+<div id="skeleton" class="section">
+  <div style="display:flex;gap:6px;margin-bottom:16px;"><div class="sk" style="width:80px;height:28px;border-radius:20px;"></div><div class="sk" style="width:80px;height:28px;border-radius:20px;"></div></div>
+  <div class="stat-row">
+    <div class="sk sk-stat" style="flex:1;"></div>
+    <div class="sk sk-stat" style="flex:1;"></div>
+    <div class="sk sk-stat" style="flex:1;"></div>
+  </div>
+  <div class="sk" style="height:44px;border-radius:14px;margin-bottom:16px;"></div>
+  <div class="sk sk-card"></div>
+  <div class="sk sk-line w60"></div>
+  <div class="sk sk-line w40"></div>
 </div>
 
 <div id="content" style="display:none;">
@@ -120,10 +135,11 @@ body{font-family:'Helvetica Neue','Noto Sans JP',sans-serif;background:var(--bg)
 
 <div class="footer">PawBon 元気チェック v0.4.3 Beta<br>© 2026 PawBon Inc.</div>
 
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="../config.js"></script>
 <script>
 var API_BASE = PAWBON_CONFIG.API_BASE;
+var CACHE_KEY = 'pawbon_report';
+var CACHE_ID_KEY = 'pawbon_line_id';
 var lineId = '';
 var familyCode = '';
 var allRecords = [];
@@ -131,84 +147,126 @@ var currentYear, currentMonth;
 var urlParams = new URLSearchParams(window.location.search);
 var viewMode = urlParams.get('view');
 
-// ═══ LIFF ═══
-async function initLiff() {
-  try {
-    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
-    if (!liff.isLoggedIn()) { liff.login(); return; }
-    var profile = await liff.getProfile();
-    lineId = profile.userId;
-  } catch (e) {
-    lineId = 'debug_user_' + Date.now();
-  }
-  loadReport();
-}
-initLiff();
-
 // ═══ Helper: レコードから日付を取得 ═══
 function getDate(r) {
   return r.date || r.checkin_date || r.check_date || '';
 }
 
-// ═══ Load（Edge Function 経由） ═══
-async function loadReport() {
+// ═══ 高速初期化（並行ロード + キャッシュ）═══
+(function() {
+  // 1) キャッシュから即時表示 / 从缓存即时显示
+  var cached = null;
   try {
-    var res = await fetch(API_BASE + '/api-report?lineId=' + encodeURIComponent(lineId));
-    var json = await res.json();
-
-    if (!json.success) {
-      document.getElementById('loading').innerHTML =
-        '<div style="font-size:40px;margin-bottom:12px;">📝</div><div>未登録です。先にペット登録を行ってください。</div>';
-      return;
+    var raw = localStorage.getItem(CACHE_KEY);
+    if (raw) {
+      cached = JSON.parse(raw);
+      applyReportDataFromCache(cached);
     }
+  } catch(e) {}
 
-    var data = json.data || {};
-    familyCode = data.familyCode;
-    allRecords = data.records || [];
+  // 2) キャッシュ lineId を読み込み / 读取缓存lineId
+  var cachedLineId = '';
+  try { cachedLineId = localStorage.getItem(CACHE_ID_KEY) || ''; } catch(e) {}
 
-    // 日付降順ソート
-    allRecords.sort(function(a, b) {
-      return getDate(b).localeCompare(getDate(a));
-    });
+  // 3) キャッシュ lineId があれば API を先行呼出 / 有缓存lineId则先行调用API
+  var apiPromise = null;
+  if (cachedLineId) {
+    apiPromise = fetchReport(cachedLineId);
+  }
 
-    // レンダリング
-    var petNames = (data.petNames || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
-    var petBreeds = (data.breeds || '').split(',').map(function(s){ return s.trim(); });
+  // 4) LIFF SDK を非同期ロード / 异步加载 LIFF SDK
+  var script = document.createElement('script');
+  script.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+  script.onload = function() { initLiff(cachedLineId, apiPromise); };
+  script.onerror = function() {
+    // LIFF SDK ロード失敗 → デバッグモード
+    lineId = cachedLineId || 'debug_user_' + Date.now();
+    if (!apiPromise) apiPromise = fetchReport(lineId);
+    apiPromise.then(applyReportData);
+  };
+  document.head.appendChild(script);
+})();
 
-    var now = new Date();
-    currentYear = now.getFullYear();
-    currentMonth = now.getMonth() + 1;
-
-    document.getElementById('loading').style.display = 'none';
-
-    if (viewMode === 'pets') {
-      document.querySelector('.header h1').textContent = '🐾 家族の様子';
-      document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気状況';
-      document.getElementById('petsContent').style.display = 'block';
-      renderPetsView(petNames, petBreeds, data);
-    } else {
-      document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
-
-      // ペットタグ
-      document.getElementById('petTags').innerHTML = petNames.map(function(name, i) {
-        var breed = petBreeds[i] || '';
-        return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
-      }).join('');
-
-      document.getElementById('totalDays').textContent = data.totalDays || 0;
-      document.getElementById('streak').textContent = data.streak || 0;
-      document.getElementById('healthRate').textContent = (data.healthRate || 0) + '%';
-      document.getElementById('regionCount').textContent = data.regionCount || '—';
-      document.getElementById('regionArea').textContent = (data.area || '') + ' ' + (data.areaDetail || '');
-
-      document.getElementById('content').style.display = 'block';
-      renderCalendar();
-      renderHistory();
-    }
-
+async function initLiff(cachedLineId, earlyApiPromise) {
+  try {
+    await liff.init({ liffId: PAWBON_CONFIG.LIFF_ID.report });
+    if (!liff.isLoggedIn()) { liff.login(); return; }
+    var profile = await liff.getProfile();
+    lineId = profile.userId;
+    // lineId をキャッシュ / 缓存lineId
+    try { localStorage.setItem(CACHE_ID_KEY, lineId); } catch(e) {}
   } catch (e) {
-    document.getElementById('loading').innerHTML =
-      '<div style="font-size:40px;margin-bottom:12px;">❌</div><div>エラー: ' + e.message + '</div>';
+    lineId = cachedLineId || 'debug_user_' + Date.now();
+  }
+
+  // lineId が同じなら先行 API を使う / lineId相同则复用先行API
+  if (earlyApiPromise && lineId === cachedLineId) {
+    earlyApiPromise.then(applyReportData);
+  } else {
+    // lineId が変わった → 再取得 / lineId变了则重新获取
+    fetchReport(lineId).then(applyReportData);
+  }
+}
+
+function fetchReport(id) {
+  return fetch(API_BASE + '/api-report?lineId=' + encodeURIComponent(id))
+    .then(function(r) { return r.json(); });
+}
+
+function applyReportDataFromCache(data) {
+  // キャッシュから描画（スケルトンは残す）/ 从缓存渲染（保留骨架屏）
+  allRecords = data.records || [];
+  allRecords.sort(function(a, b) { return getDate(b).localeCompare(getDate(a)); });
+  renderFromData(data);
+}
+
+function applyReportData(json) {
+  if (!json.success) {
+    document.getElementById('skeleton').innerHTML =
+      '<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">📝</div><div style="color:var(--s400);">未登録です。先にペット登録を行ってください。</div></div>';
+    return;
+  }
+  var data = json.data || {};
+  // キャッシュ更新 / 更新缓存
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch(e) {}
+
+  familyCode = data.familyCode;
+  allRecords = data.records || [];
+  allRecords.sort(function(a, b) { return getDate(b).localeCompare(getDate(a)); });
+
+  renderFromData(data);
+}
+
+function renderFromData(data) {
+  var petNames = (data.petNames || '').split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  var petBreeds = (data.breeds || '').split(',').map(function(s){ return s.trim(); });
+
+  var now = new Date();
+  currentYear = now.getFullYear();
+  currentMonth = now.getMonth() + 1;
+
+  document.getElementById('skeleton').style.display = 'none';
+
+  if (viewMode === 'pets') {
+    document.querySelector('.header h1').textContent = '🐾 家族の様子';
+    document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気状況';
+    document.getElementById('petsContent').style.display = 'block';
+    document.getElementById('content').style.display = 'none';
+    renderPetsView(petNames, petBreeds, data);
+  } else {
+    document.getElementById('headerSub').textContent = petNames.join('、') + ' の元気レポート';
+    document.getElementById('petTags').innerHTML = petNames.map(function(name, i) {
+      var breed = petBreeds[i] || '';
+      return '<span class="pet-tag">🐾 ' + escapeHtml(name) + (breed ? ' (' + escapeHtml(breed) + ')' : '') + '</span>';
+    }).join('');
+    document.getElementById('totalDays').textContent = data.totalDays || 0;
+    document.getElementById('streak').textContent = data.streak || 0;
+    document.getElementById('healthRate').textContent = (data.healthRate || 0) + '%';
+    document.getElementById('regionCount').textContent = data.regionCount || '—';
+    document.getElementById('regionArea').textContent = (data.area || '') + ' ' + (data.areaDetail || '');
+    document.getElementById('content').style.display = 'block';
+    renderCalendar();
+    renderHistory();
   }
 }
 
